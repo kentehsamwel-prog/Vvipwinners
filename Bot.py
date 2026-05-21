@@ -87,7 +87,7 @@ BOT_TOKEN      = "8854877793:AAFactgLKt7CVcTlvlhoEKtzdkGCYs0G1fY"
 ADMIN_ID       = 8535925646
 CHANNEL_INVITE = "https://t.me/+mRNfGaNhz3RkZGRk"
 SUPPORT_URL    = "https://t.me/EvalonwinnersBot"
-DATA_DIR       = os.environ.get("DATA_DIR", "/data")
+DATA_DIR = os.environ.get("DATA_DIR", "/tmp/data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
 DB_FILE        = os.path.join(DATA_DIR, "vip_users.json")
