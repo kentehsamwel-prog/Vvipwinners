@@ -83,7 +83,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # CONFIG
 # ============================================================
-BOT_TOKEN      = "8854877793:AAFactgLKt7CVcTlvlhoEKtzdkGCYs0G1fY"
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_ID       = 8535925646
 CHANNEL_INVITE = "https://t.me/+mRNfGaNhz3RkZGRk"
 SUPPORT_URL    = "https://t.me/EvalonwinnersBot"
