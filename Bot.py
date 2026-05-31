@@ -1892,7 +1892,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif replied.animation: sent, _ = await send_to_list(context, targets, animation=replied.animation.file_id, caption=replied.caption or caption or None)
         else: sent, _ = await send_to_list(context, targets, text=replied.text or caption)
     elif caption:
-        sent, _ = await send_to_list(context, targets, text=caption, parse_mode=None)
+        sent, _ = await send_to_list(context, targets, text=caption, parse_mode="Markdown")
     else:
         await update.message.reply_text(
             "ðŸ“¢ *Broadcast:*\n`/broadcast text` â†’ VIP\n`/broadcast all text` â†’ Everyone\nOr reply to media.",
