@@ -50,7 +50,7 @@ def _self_ping_loop():
     while True:
         try:
             urllib.request.urlopen(url, timeout=10)
-            logger.info("Self-ping OK — bot still awake ✅")
+            logger.info("Self-ping OK â€” bot still awake âœ…")
         except Exception as e:
             logger.warning(f"Self-ping failed: {e}")
         time.sleep(300)  # 5 minutes
@@ -84,7 +84,7 @@ def _pg_init():
         """)
         conn.commit()
         cur.close(); conn.close()
-        logger.info("PostgreSQL connected & table ready ✅")
+        logger.info("PostgreSQL connected & table ready âœ…")
     except Exception as e:
         logger.warning(f"PostgreSQL init error: {e}")
 
@@ -141,10 +141,10 @@ def add_watermark(image_bytes: bytes, user_id: int = None) -> bytes:
     if not WATERMARK_ENABLED:
         return image_bytes
     try:
-        # Build watermark text — two lines if user_id given
+        # Build watermark text â€” two lines if user_id given
         if user_id:
             wm_line1 = "@EvalonwinnersBot"
-            wm_line2 = f"🔑 ID: {user_id}"
+            wm_line2 = f"ðŸ”‘ ID: {user_id}"
         else:
             wm_line1 = "@EvalonwinnersBot"
             wm_line2 = None
@@ -243,7 +243,7 @@ def normalize_pair(raw):
     r = raw.upper().replace("/","").replace("-","").replace(" ","")
     return PAIR_ALIASES.get(r, raw.upper())
 
-# Signal format: EURUSD 1 → pair + expiry only
+# Signal format: EURUSD 1 â†’ pair + expiry only
 def parse_signal(text):
     parts = text.strip().split()
     if len(parts) < 2:
@@ -270,9 +270,9 @@ def current_time_utc():
 KAULI_MBIU = "\U0001f451 *ALWAYS EVALON TRADER IS THE KING OF BINARY* \U0001f451"
 
 WHY_WE_MOVED = (
-    "━━━━━━━━━━━━━━"+"\n"
+    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n"
     "\U0001f525 *Why We Moved From Our VIP Channel To The Bot System* \U0001f525\n"
-    "━━━━━━━━━━━━━━"+"\n\n"
+    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n\n"
     "Many people keep asking why we moved from our VIP channel with thousands of members into a private bot system.\n\n"
     "The answer is simple \u2014 we wanted a system that is *faster, safer, more organized, and more reliable* for real VIP members.\n\n"
     "The old VIP channel started facing several problems:\n\n"
@@ -284,11 +284,11 @@ WHY_WE_MOVED = (
     "\u2022 Manual approvals sometimes delayed access for new members\n\n"
     "To improve the overall experience, we created the bot system.\n\n"
     "\U0001f680 The bot delivers signals *faster, earlier, and automatically* without unnecessary delays.\n"
-    "━━━━━━━━━━━━━━"+"\n"
+    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n"
 )
 
 VIP_RULES = (
-    "━━━━━━━━━━━━━━"+"\n"
+    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n"
     "\U0001f4cb *RULES OF EVALON WINNERS:*\n\n"
     "1\ufe0f\u20e3 ONLY INVEST WHAT YOU CAN AFFORD TO LOSE\n"
     "2\ufe0f\u20e3 FOLLOW THE SIGNAL \u2014 AVOID EMOTIONS\n"
@@ -305,14 +305,16 @@ VIP_RULES = (
     "1\ufe0f\u20e33\ufe0f\u20e3 NEVER BORROW MONEY TO INVEST \u2014 TOO RISKY\n"
     "1\ufe0f\u20e34\ufe0f\u20e3 TRADE WITH A CLEAR MIND \u2014 NOT ANGER OR ALCOHOL\n"
     "2\ufe0f\u20e30\ufe0f\u20e3 EVALON WINNERS \u2014 WE RISE TOGETHER!\n"
-    "━━━━━━━━━━━━━━"+"\n"
+    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n"
 )
 
-SESSION_STATS = {"wins": 0, "losses": 0, "start_time": None}
-SESSION_LOG   = []   # list of dicts: {pair, expiry, direction, result, count}
+SESSION_STATS    = {"wins": 0, "losses": 0, "start_time": None}
+SESSION_LOG      = []   # list of dicts: {pair, expiry, direction, result, count}
+FULL_SESSION_LOG = []   # full ordered log: every message/sticker sent during session
+                        # entry: {"type": "text"|"sticker", "content": str}
 BASE_MEMBERS  = 1500
 
-# Weekly stats — stored in DB so they survive restarts
+# Weekly stats â€” stored in DB so they survive restarts
 def _get_weekly_key():
     """Returns key like 'weekly_2026_W21' for current ISO week."""
     now = datetime.now(timezone.utc)
@@ -481,17 +483,17 @@ TUTORIAL_VIDEO = "BAACAgQAAxkBAAIFn2oRZ0HUGBuMA4GYy3E7cC4Bv32WAAKqHgACyDCJUL7jK5
 INVITE_LINK    = "https://t.me/EvalonwinnersBot?start=ref8535925646"
 
 WEEKEND_VIP_MSGS = [
-    "🎉 Happy {day}, *{name}!*\n\nEnjoy your weekend — rest well and recharge!\nWe will be back with signals on *Monday*. 💪\n\n🔥 Stay focused — the market never sleeps forever!\n\n👑 ALWAYS EVALON TRADER IS THE KING OF BINARY 👑",
-    "😎 {day} vibes, *{name}!*\n\nNo signals today — enjoy your break!\nSee you bright and early on *Monday* ready to win! 🏆\n\n💎 Rest today. Profit Monday!\n\n👑 ALWAYS EVALON TRADER IS THE KING OF BINARY 👑",
-    "🌟 Hey *{name}!* Happy {day}!\n\nMarkets are closed — take a break, spend time with family!\nWe resume *Monday* with fresh signals. 🚀\n\n👑 ALWAYS EVALON TRADER IS THE KING OF BINARY 👑",
-    "🏖️ *{name}*, enjoy your {day}!\n\nThe best traders also know when to rest.\nSee you *Monday* — signals resume then! 💪\n\n👑 ALWAYS EVALON TRADER IS THE KING OF BINARY 👑",
+    "ðŸŽ‰ Happy {day}, *{name}!*\n\nEnjoy your weekend â€” rest well and recharge!\nWe will be back with signals on *Monday*. ðŸ’ª\n\nðŸ”¥ Stay focused â€” the market never sleeps forever!\n\nðŸ‘‘ ALWAYS EVALON TRADER IS THE KING OF BINARY ðŸ‘‘",
+    "ðŸ˜Ž {day} vibes, *{name}!*\n\nNo signals today â€” enjoy your break!\nSee you bright and early on *Monday* ready to win! ðŸ†\n\nðŸ’Ž Rest today. Profit Monday!\n\nðŸ‘‘ ALWAYS EVALON TRADER IS THE KING OF BINARY ðŸ‘‘",
+    "ðŸŒŸ Hey *{name}!* Happy {day}!\n\nMarkets are closed â€” take a break, spend time with family!\nWe resume *Monday* with fresh signals. ðŸš€\n\nðŸ‘‘ ALWAYS EVALON TRADER IS THE KING OF BINARY ðŸ‘‘",
+    "ðŸ–ï¸ *{name}*, enjoy your {day}!\n\nThe best traders also know when to rest.\nSee you *Monday* â€” signals resume then! ðŸ’ª\n\nðŸ‘‘ ALWAYS EVALON TRADER IS THE KING OF BINARY ðŸ‘‘",
 ]
 
 WEEKEND_NOVIP_MSGS = [
-    "🎉 Happy {day}, *{name}!*\n\nEnjoy your weekend!\nBut wait — are you still missing out on VIP signals? 🤔\n\n💎 *Don\'t worry — FREE spots are available!*\n\n🎰 *Spin & Win* a discount up to *70% OFF* VIP access!\n👥 *Invite friends* and earn rewards!\n\n👇 Tap the buttons below to get started!\n\n👑 ALWAYS EVALON TRADER IS THE KING OF BINARY 👑",
-    "😎 {day} greetings, *{name}!*\n\nWhile you relax, our VIP members are preparing for *Monday\'s big session!* 📊\n\n🚀 *Want to join them?*\n🎰 Spin for up to *70% OFF* VIP!\n👥 Invite friends and earn free access!\n\n👇 Tap the buttons below!\n\n👑 ALWAYS EVALON TRADER IS THE KING OF BINARY 👑",
-    "🌟 Hey *{name}!*\n\nHappy {day}! No signals today — but Monday is coming fast! ⚡\n\n❓ *Still not VIP? Free spots are open!*\n🎰 Spin & Win — get up to *70% discount*!\n👥 Invite a friend — both of you benefit!\n\n👇 Tap below to get started!\n\n👑 ALWAYS EVALON TRADER IS THE KING OF BINARY 👑",
-    "🏖️ Enjoy your {day}, *{name}!*\n\nOur VIP members are resting and ready for *Monday\'s session!* 💪\n\n💡 *You can join them — spots are still available!*\n🎰 Spin for a discount up to *70% OFF!*\n👥 Invite friends & earn rewards!\n\n👇 Tap below now!\n\n👑 ALWAYS EVALON TRADER IS THE KING OF BINARY 👑",
+    "ðŸŽ‰ Happy {day}, *{name}!*\n\nEnjoy your weekend!\nBut wait â€” are you still missing out on VIP signals? ðŸ¤”\n\nðŸ’Ž *Don\'t worry â€” FREE spots are available!*\n\nðŸŽ° *Spin & Win* a discount up to *70% OFF* VIP access!\nðŸ‘¥ *Invite friends* and earn rewards!\n\nðŸ‘‡ Tap the buttons below to get started!\n\nðŸ‘‘ ALWAYS EVALON TRADER IS THE KING OF BINARY ðŸ‘‘",
+    "ðŸ˜Ž {day} greetings, *{name}!*\n\nWhile you relax, our VIP members are preparing for *Monday\'s big session!* ðŸ“Š\n\nðŸš€ *Want to join them?*\nðŸŽ° Spin for up to *70% OFF* VIP!\nðŸ‘¥ Invite friends and earn free access!\n\nðŸ‘‡ Tap the buttons below!\n\nðŸ‘‘ ALWAYS EVALON TRADER IS THE KING OF BINARY ðŸ‘‘",
+    "ðŸŒŸ Hey *{name}!*\n\nHappy {day}! No signals today â€” but Monday is coming fast! âš¡\n\nâ“ *Still not VIP? Free spots are open!*\nðŸŽ° Spin & Win â€” get up to *70% discount*!\nðŸ‘¥ Invite a friend â€” both of you benefit!\n\nðŸ‘‡ Tap below to get started!\n\nðŸ‘‘ ALWAYS EVALON TRADER IS THE KING OF BINARY ðŸ‘‘",
+    "ðŸ–ï¸ Enjoy your {day}, *{name}!*\n\nOur VIP members are resting and ready for *Monday\'s session!* ðŸ’ª\n\nðŸ’¡ *You can join them â€” spots are still available!*\nðŸŽ° Spin for a discount up to *70% OFF!*\nðŸ‘¥ Invite friends & earn rewards!\n\nðŸ‘‡ Tap below now!\n\nðŸ‘‘ ALWAYS EVALON TRADER IS THE KING OF BINARY ðŸ‘‘",
 ]
 
 
@@ -502,14 +504,14 @@ def msg_preparing(pair, expiry, trades=1):
     tline = f"\U0001f4a5 TRADES  : *{trades}*\n" if trades > 1 else ""
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "━━━━━━━━━━━━━━"+"\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n"
         f"\U0001f4ca PAIR    : *{pair}*\n"
         f"\u23f1 EXPIRY  : *{expiry} MIN*\n"
         f"{tline}"
         f"\U0001f550 TIME    : *{current_time_utc()}*\n"
         "\U0001f4cd STATUS  : SIGNAL PREPARING...\n\n"
         "\u26a0\ufe0f WAIT FOR DIRECTION\n"
-        "━━━━━━━━━━━━━━"+"\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n\n"
         "\U0001f525 STAY READY \u2014 ENTRY COMING SOON\n"
         "\U0001f48e VVIP MEMBERS ONLY"
     )
@@ -519,12 +521,12 @@ def msg_direction(pair, expiry, direction, trades=1):
     color = "\U0001f7e2" if direction == "BUY" else "\U0001f534"
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "━━━━━━━━━━━━━━"+"\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n"
         f"\U0001f4ca PAIR      : *{pair}*\n"
         f"\u23f1 EXPIRY    : *{expiry} MIN*\n"
         f"\U0001f550 ENTRY     : *{current_time_utc()}*\n"
         f"{arrow} DIRECTION : *{color} {direction}*\n"
-        "━━━━━━━━━━━━━━"+"\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n\n"
         "\u26a1 *OPEN YOUR TRADE NOW!*\n"
         "\U0001f48e VVIP MEMBERS ONLY"
     )
@@ -532,12 +534,12 @@ def msg_direction(pair, expiry, direction, trades=1):
 def msg_win(pair, expiry, direction, count=1):
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "━━━━━━━━━━━━━━"+"\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n"
         f"\U0001f4ca PAIR      : *{pair}*\n"
         f"\u23f1 EXPIRY    : *{expiry} MIN*\n"
         f"\U0001f4c8 DIRECTION : *{direction}*\n"
         f"\U0001f3c6 RESULT    : *WIN \u2705 x{count}*\n"
-        "━━━━━━━━━━━━━━"+"\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n\n"
         "\U0001f4b0 *Congratulations! Another profit secured!*\n"
         "\U0001f525 Stay focused \u2014 more signals coming!\n"
         "\U0001f48e VVIP MEMBERS ONLY"
@@ -546,12 +548,12 @@ def msg_win(pair, expiry, direction, count=1):
 def msg_loss(pair, expiry, direction, count=1):
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "━━━━━━━━━━━━━━"+"\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n"
         f"\U0001f4ca PAIR      : *{pair}*\n"
         f"\u23f1 EXPIRY    : *{expiry} MIN*\n"
         f"\U0001f4c8 DIRECTION : *{direction}*\n"
         f"\U0001f534 RESULT    : *LOSS x{count}*\n"
-        "━━━━━━━━━━━━━━"+"\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n\n"
         "\U0001f4aa *Stay strong! Every loss is a lesson!*\n"
         "\U0001f9e0 Protect your capital \u2014 next signal coming!\n"
         "\U0001f6ab No Martingale \u2014 trust the process!\n"
@@ -563,9 +565,9 @@ def msg_session_soon(minutes, is_vip=False):
     rules = f"\n{VIP_RULES}" if is_vip else "\n"
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "━━━━━━━━━━━━━━"+"\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n"
         f"\u23f0 SESSION STARTING IN *{when.upper()}*\n"
-        "━━━━━━━━━━━━━━"+"\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n\n"
         "\U0001f4cb *Get ready:*\n"
         "\u2705 Open your binary broker account\n"
         "\u2705 Set correct expiry time\n"
@@ -592,17 +594,17 @@ def msg_session_end(wins=0, losses=0):
             dur_line = f"\u23f1 DURATION : *{h}h {m}min*\n"
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "━━━━━━━━━━━━━━\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
         "\U0001f3c1 *TRADING SESSION ENDED*\n"
-        "━━━━━━━━━━━━━━\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
         "That's a wrap for today's session!\n\n"
         "\U0001f4ca *SESSION RESULTS:*\n"
-        "━━━━━━━━━━━━━━\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
         f"\u2705 WIN      : *{wins}*\n"
         f"\u274c LOSS     : *{losses}*\n"
         f"\U0001f4c8 ACCURACY : *{acc}*\n"
         f"{dur_line}"
-        "━━━━━━━━━━━━━━\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
         "\U0001f4aa Great discipline leads to consistent profits!\n"
         "\U0001f550 Next session will be announced soon!\n\n"
         "Thank you for trading with us!\n\n"
@@ -612,10 +614,10 @@ def msg_session_end(wins=0, losses=0):
 def msg_cancelled(pair):
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "━━━━━━━━━━━━━━"+"\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n"
         f"\U0001f4ca PAIR   : *{pair}*\n"
         "\u274c STATUS : *SIGNAL CANCELLED*\n"
-        "━━━━━━━━━━━━━━"+"\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n\n"
         "\u23ed Skip this one \u2014 next signal coming soon!\n"
         "\U0001f9e0 Patience is the key to success!\n"
         "\U0001f48e VVIP MEMBERS ONLY"
@@ -654,61 +656,61 @@ async def send_to_list(context, uid_list, text=None, photo=None,
 # ============================================================
 def kb_join():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📢 Join Our Channel", url=CHANNEL_INVITE)],
-        [InlineKeyboardButton("✅ I Have Joined",    callback_data="check_join")],
+        [InlineKeyboardButton("ðŸ“¢ Join Our Channel", url=CHANNEL_INVITE)],
+        [InlineKeyboardButton("âœ… I Have Joined",    callback_data="check_join")],
     ])
 
 def kb_locked():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔑 Enter VIP Code", callback_data="enter_code")],
-        [InlineKeyboardButton("💬 Contact Admin",  url=SUPPORT_URL)],
+        [InlineKeyboardButton("ðŸ”‘ Enter VIP Code", callback_data="enter_code")],
+        [InlineKeyboardButton("ðŸ’¬ Contact Admin",  url=SUPPORT_URL)],
     ])
 
 def kb_support():
-    return InlineKeyboardMarkup([[InlineKeyboardButton("💬 Contact Admin", url=SUPPORT_URL)]])
+    return InlineKeyboardMarkup([[InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)]])
 
 def kb_direction(sig_id):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📈 BUY",  callback_data=f"dir_BUY_{sig_id}"),
-         InlineKeyboardButton("📉 SELL", callback_data=f"dir_SELL_{sig_id}")],
-        [InlineKeyboardButton("❌ Cancel Signal", callback_data=f"dir_CANCEL_{sig_id}")]
+        [InlineKeyboardButton("ðŸ“ˆ BUY",  callback_data=f"dir_BUY_{sig_id}"),
+         InlineKeyboardButton("ðŸ“‰ SELL", callback_data=f"dir_SELL_{sig_id}")],
+        [InlineKeyboardButton("âŒ Cancel Signal", callback_data=f"dir_CANCEL_{sig_id}")]
     ])
 
 def kb_result(sig_id):
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ WIN",  callback_data=f"res_WIN_{sig_id}"),
-         InlineKeyboardButton("❌ LOSS", callback_data=f"res_LOSS_{sig_id}")],
-        [InlineKeyboardButton("🏁 End Session", callback_data="end_session")]
+        [InlineKeyboardButton("âœ… WIN",  callback_data=f"res_WIN_{sig_id}"),
+         InlineKeyboardButton("âŒ LOSS", callback_data=f"res_LOSS_{sig_id}")],
+        [InlineKeyboardButton("ðŸ End Session", callback_data="end_session")]
     ])
 
 def kb_after_result():
-    return InlineKeyboardMarkup([[InlineKeyboardButton("🏁 End Session", callback_data="end_session")]])
+    return InlineKeyboardMarkup([[InlineKeyboardButton("ðŸ End Session", callback_data="end_session")]])
 
 def kb_session_timing():
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("⏰ 30 Minutes", callback_data="sess_30"),
-        InlineKeyboardButton("⏰ 1 Hour",     callback_data="sess_60"),
+        InlineKeyboardButton("â° 30 Minutes", callback_data="sess_30"),
+        InlineKeyboardButton("â° 1 Hour",     callback_data="sess_60"),
     ]])
 
 def kb_get_vip():
-    return InlineKeyboardMarkup([[InlineKeyboardButton("💎 Get VIP Access", callback_data="enter_code")]])
+    return InlineKeyboardMarkup([[InlineKeyboardButton("ðŸ’Ž Get VIP Access", callback_data="enter_code")]])
 
 def kb_feedback(session_id):
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("⭐", callback_data=f"fb_{session_id}_1"),
-        InlineKeyboardButton("⭐⭐", callback_data=f"fb_{session_id}_2"),
-        InlineKeyboardButton("⭐⭐⭐", callback_data=f"fb_{session_id}_3"),
-        InlineKeyboardButton("⭐⭐⭐⭐", callback_data=f"fb_{session_id}_4"),
-        InlineKeyboardButton("⭐⭐⭐⭐⭐", callback_data=f"fb_{session_id}_5"),
+        InlineKeyboardButton("â­", callback_data=f"fb_{session_id}_1"),
+        InlineKeyboardButton("â­â­", callback_data=f"fb_{session_id}_2"),
+        InlineKeyboardButton("â­â­â­", callback_data=f"fb_{session_id}_3"),
+        InlineKeyboardButton("â­â­â­â­", callback_data=f"fb_{session_id}_4"),
+        InlineKeyboardButton("â­â­â­â­â­", callback_data=f"fb_{session_id}_5"),
     ]])
 
-# FIX 1: admin /start — short panel + buttons
+# FIX 1: admin /start â€” short panel + buttons
 def kb_admin_start():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("⏰ Session 30 min", callback_data="sess_30"),
-         InlineKeyboardButton("⏰ Session 1 hr",   callback_data="sess_60")],
-        [InlineKeyboardButton("🏁 End Session",    callback_data="end_session")],
-        [InlineKeyboardButton("❓ Help",            callback_data="admin_help")],
+        [InlineKeyboardButton("â° Session 30 min", callback_data="sess_30"),
+         InlineKeyboardButton("â° Session 1 hr",   callback_data="sess_60")],
+        [InlineKeyboardButton("ðŸ End Session",    callback_data="end_session")],
+        [InlineKeyboardButton("â“ Help",            callback_data="admin_help")],
     ])
 
 # ============================================================
@@ -722,10 +724,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     update_user(uid, {"name": name})
 
     if is_admin(uid):
-        db_type = "✅ PostgreSQL" if DATABASE_URL else "⚠️ Local JSON"
+        db_type = "âœ… PostgreSQL" if DATABASE_URL else "âš ï¸ Local JSON"
         display = get_display_count()
         await update.message.reply_text(
-            f"⚡ *EVALON VIP SIGNALS*\n💾 {db_type}    👤 Total VIP Members: *{display}*",
+            f"âš¡ *EVALON VIP SIGNALS*\nðŸ’¾ {db_type}    ðŸ‘¤ Total VIP Members: *{display}*",
             parse_mode="Markdown", reply_markup=kb_admin_start()
         )
         return
@@ -743,9 +745,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 msg, parse_mode="Markdown",
                 protect_content=True,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🎰 Spin & Win Discount", url=INVITE_LINK),
-                     InlineKeyboardButton("👥 Invite & Earn", url=INVITE_LINK)],
-                    [InlineKeyboardButton("🔑 Get VIP Access", callback_data="enter_code")],
+                    [InlineKeyboardButton("ðŸŽ° Spin & Win Discount", url=INVITE_LINK),
+                     InlineKeyboardButton("ðŸ‘¥ Invite & Earn", url=INVITE_LINK)],
+                    [InlineKeyboardButton("ðŸ”‘ Get VIP Access", callback_data="enter_code")],
                 ])
             )
         return
@@ -753,84 +755,84 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = get_user(uid)
     if not u.get("joined_channel"):
         await update.message.reply_text(
-            f"👋 Welcome, *{name}!*\n\n"
-            "⚡ *EVALON VIP SIGNALS*\n"
-            "━━━━━━━━━━━━━━\n\n"
-            "📦 *WHAT YOU GET AS VIP:*\n"
-            "━━━━━━━━━━━━━━\n"
-            "📊 Daily Trading Signals\n"
-            "⏱ Multiple Expiry Times\n"
-            "📈 BUY/SELL Direction\n"
-            "✅ WIN/LOSS Results\n"
-            "🔥 High Confidence Alerts\n"
-            "📉 8-10 Trades Per Day — Monday to Friday\n"
-            "📋 Session Start & End Notifications\n\n"
-            "━━━━━━━━━━━━━━\n"
+            f"ðŸ‘‹ Welcome, *{name}!*\n\n"
+            "âš¡ *EVALON VIP SIGNALS*\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
+            "ðŸ“¦ *WHAT YOU GET AS VIP:*\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+            "ðŸ“Š Daily Trading Signals\n"
+            "â± Multiple Expiry Times\n"
+            "ðŸ“ˆ BUY/SELL Direction\n"
+            "âœ… WIN/LOSS Results\n"
+            "ðŸ”¥ High Confidence Alerts\n"
+            "ðŸ“‰ 8-10 Trades Per Day â€” Monday to Friday\n"
+            "ðŸ“‹ Session Start & End Notifications\n\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
             "To access this bot, first join our official channel:\n\n"
-            "📢 *Evalon Winners Channel*\n\n"
-            "Tap *Join Our Channel* then *I Have Joined* 👇\n\n"
+            "ðŸ“¢ *Evalon Winners Channel*\n\n"
+            "Tap *Join Our Channel* then *I Have Joined* ðŸ‘‡\n\n"
             f"{WHY_WE_MOVED}\n{KAULI_MBIU}",
             parse_mode="Markdown", reply_markup=kb_join(), protect_content=True
         )
         await asyncio.sleep(1)
         await context.bot.send_video(
             chat_id=chat_id, video=TUTORIAL_VIDEO,
-            caption="👆 *Watch how our VIP bot works!*\n\nSee exactly what you will receive as a VIP member. 🎯",
+            caption="ðŸ‘† *Watch how our VIP bot works!*\n\nSee exactly what you will receive as a VIP member. ðŸŽ¯",
             parse_mode="Markdown", protect_content=True
         )
         return
 
     if not is_vip(uid):
-        mday = "🟢 Market Open" if is_market_day() else "🔴 Weekend — resumes Monday."
+        mday = "ðŸŸ¢ Market Open" if is_market_day() else "ðŸ”´ Weekend â€” resumes Monday."
         await update.message.reply_text(
-            f"👋 Welcome back, *{name}!*\n\n"
-            "⚡ *EVALON VIP SIGNALS*\n"
-            "━━━━━━━━━━━━━━\n\n"
-            "🔒 *VIP ACCESS REQUIRED*\n\n"
-            "✅ Real market signals — Monday to Friday\n"
-            "✅ Non-Martingale strategy only\n"
-            "✅ High accuracy entries\n"
-            "✅ Win/Loss updates after every trade\n"
-            "✅ Consistent signal delivery during market hours\n\n"
-            f"⏰ *Monday — Friday only* | {mday}\n\n"
-            "━━━━━━━━━━━━━━\n\n"
+            f"ðŸ‘‹ Welcome back, *{name}!*\n\n"
+            "âš¡ *EVALON VIP SIGNALS*\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
+            "ðŸ”’ *VIP ACCESS REQUIRED*\n\n"
+            "âœ… Real market signals â€” Monday to Friday\n"
+            "âœ… Non-Martingale strategy only\n"
+            "âœ… High accuracy entries\n"
+            "âœ… Win/Loss updates after every trade\n"
+            "âœ… Consistent signal delivery during market hours\n\n"
+            f"â° *Monday â€” Friday only* | {mday}\n\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
             f"{WHY_WE_MOVED}\n"
-            "🔑 Have a code? Tap below\n"
-            "💬 VIP access available through admin approval 👇\n\n"
+            "ðŸ”‘ Have a code? Tap below\n"
+            "ðŸ’¬ VIP access available through admin approval ðŸ‘‡\n\n"
             f"{KAULI_MBIU}",
             parse_mode="Markdown", reply_markup=kb_locked(), protect_content=True
         )
         await asyncio.sleep(1)
         await context.bot.send_video(
             chat_id=chat_id, video=TUTORIAL_VIDEO,
-            caption="👆 *Watch how our VIP bot works!*\n\nGet your VIP code today and start receiving signals! 🚀",
+            caption="ðŸ‘† *Watch how our VIP bot works!*\n\nGet your VIP code today and start receiving signals! ðŸš€",
             parse_mode="Markdown", protect_content=True
         )
         return
 
-    mday = "🟢 Market Open" if is_market_day() else "🔴 Weekend — signals resume Monday."
+    mday = "ðŸŸ¢ Market Open" if is_market_day() else "ðŸ”´ Weekend â€” signals resume Monday."
     await update.message.reply_text(
-        f"👋 Welcome back, *{name}!* 💎\n\n"
-        "⚡ *EVALON VIP SIGNALS*\n"
-        "━━━━━━━━━━━━━━\n\n"
-        "🔒 *VIP ACCESS REQUIRED*\n\n"
-        "✅ Real market signals — Monday to Friday\n"
-        "✅ Non-Martingale strategy only\n"
-        "✅ High accuracy entries\n"
-        "✅ Win/Loss updates after every trade\n"
-        "✅ Consistent signal delivery during market hours\n\n"
-        f"⏰ *Monday — Friday only* | {mday}\n\n"
-        "━━━━━━━━━━━━━━\n\n"
+        f"ðŸ‘‹ Welcome back, *{name}!* ðŸ’Ž\n\n"
+        "âš¡ *EVALON VIP SIGNALS*\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
+        "ðŸ”’ *VIP ACCESS REQUIRED*\n\n"
+        "âœ… Real market signals â€” Monday to Friday\n"
+        "âœ… Non-Martingale strategy only\n"
+        "âœ… High accuracy entries\n"
+        "âœ… Win/Loss updates after every trade\n"
+        "âœ… Consistent signal delivery during market hours\n\n"
+        f"â° *Monday â€” Friday only* | {mday}\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
         f"{WHY_WE_MOVED}\n"
-        "🔑 Have a code? Tap below\n"
-        "💬 VIP access available through admin approval\n\n"
+        "ðŸ”‘ Have a code? Tap below\n"
+        "ðŸ’¬ VIP access available through admin approval\n\n"
         f"{KAULI_MBIU}",
         parse_mode="Markdown", reply_markup=kb_support(), protect_content=True
     )
     await asyncio.sleep(1)
     await context.bot.send_video(
         chat_id=chat_id, video=TUTORIAL_VIDEO,
-        caption="👆 *How to use your VIP signals!*\n\nFollow every signal exactly as shown. Good luck! 🎯",
+        caption="ðŸ‘† *How to use your VIP signals!*\n\nFollow every signal exactly as shown. Good luck! ðŸŽ¯",
         parse_mode="Markdown", protect_content=True
     )
 
@@ -856,6 +858,11 @@ async def _process_result(update, context, result, sig_id, count, query=None):
     result_text = msg_win(pair, expiry, direction, count) if result == "WIN" else msg_loss(pair, expiry, direction, count)
     sticker_id  = WIN_STICKER if result == "WIN" else LOSS_STICKER
 
+    # Record result to full session log
+    FULL_SESSION_LOG.append({"type": "text",    "content": result_text})
+    if USE_STICKERS and sticker_id and "PASTE_" not in sticker_id:
+        FULL_SESSION_LOG.append({"type": "sticker", "content": sticker_id})
+
     for uid_str in msgs:
         uidint = int(uid_str)
         try:
@@ -870,7 +877,7 @@ async def _process_result(update, context, result, sig_id, count, query=None):
     if sig_id and sig_id in signals:
         del signals[sig_id]; save_signals(signals)
 
-    icon  = "✅" if result == "WIN" else "❌"
+    icon  = "âœ…" if result == "WIN" else "âŒ"
     total = SESSION_STATS["wins"] + SESSION_STATS["losses"]
     acc   = f"{(SESSION_STATS['wins']/total*100):.1f}%" if total > 0 else "N/A"
 
@@ -889,24 +896,24 @@ async def _process_result(update, context, result, sig_id, count, query=None):
 
     admin_summary = (
         f"\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "━━━━━━━━━━━━━━\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
         f"\U0001f4ca PAIR      : *{pair}*\n"
         f"\u23f1 EXPIRY    : *{expiry} MIN*\n"
         f"\U0001f4c8 DIRECTION : *{direction}*\n"
         f"{icon} RESULT    : *{result} x{count}*\n"
-        "━━━━━━━━━━━━━━\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
         "\U0001f4ca *SESSION SO FAR:*\n"
-        "━━━━━━━━━━━━━━\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
         f"\u2705 WIN      : *{wins_so_far}*\n"
         f"\u274c LOSS     : *{losses_so_far}*\n"
         f"\U0001f4c8 ACCURACY : *{acc}*\n"
         f"{dur_line}"
-        "━━━━━━━━━━━━━━\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
         "\U0001f48e VVIP MEMBERS ONLY"
     )
 
     admin_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🏁 End Session", callback_data="end_session")],
+        [InlineKeyboardButton("ðŸ End Session", callback_data="end_session")],
     ])
 
     if query:
@@ -934,6 +941,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not is_admin(uid): return
         SESSION_STATS["wins"] = SESSION_STATS["losses"] = 0
         SESSION_LOG.clear()
+        FULL_SESSION_LOG.clear()
         SESSION_STATS["start_time"] = time.time()
         mins     = 30 if data == "sess_30" else 60
         vip_ids  = get_vip_ids()
@@ -946,12 +954,12 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown", reply_markup=kb_get_vip())
             except: pass
         await q.edit_message_text(
-            "⏰ *Session alert sent!*\n\nWhen market is ready, tap below 👇",
+            "â° *Session alert sent!*\n\nWhen market is ready, tap below ðŸ‘‡",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🟢 Send Session Start Now", callback_data="send_start_now")],
-                [InlineKeyboardButton("⚠️ Emergency / Delay",      callback_data="emergency")],
-                [InlineKeyboardButton("🏁 End Session",             callback_data="end_session")],
+                [InlineKeyboardButton("ðŸŸ¢ Send Session Start Now", callback_data="send_start_now")],
+                [InlineKeyboardButton("âš ï¸ Emergency / Delay",      callback_data="emergency")],
+                [InlineKeyboardButton("ðŸ End Session",             callback_data="end_session")],
             ])
         )
         return
@@ -961,15 +969,18 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         vip_ids    = get_vip_ids()
         start_text = (
             "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-            "━━━━━━━━━━━━━━"+"\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n"
             "\U0001f7e2 *SESSION IS STARTING NOW!*\n"
-            "━━━━━━━━━━━━━━"+"\n\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n\n"
             "\u2705 Get your charts ready\n"
             "\u2705 Set your expiry time\n"
             "\u2705 Wait for the signal\n\n"
             "\U0001f525 *First signal incoming!*\n"
             "\U0001f48e VVIP MEMBERS ONLY"
         )
+        # Record session start in full log
+        FULL_SESSION_LOG.append({"type": "sticker", "content": SESSION_START_STICKER})
+        FULL_SESSION_LOG.append({"type": "text",    "content": start_text})
         for vid in vip_ids:
             try: await context.bot.send_sticker(chat_id=vid, sticker=SESSION_START_STICKER, protect_content=True)
             except: pass
@@ -979,8 +990,8 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "\U0001f7e2 *Session started!*\n\nSend your first signal now!",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("⚠️ Emergency / Delay", callback_data="emergency")],
-                [InlineKeyboardButton("🏁 End Session",        callback_data="end_session")],
+                [InlineKeyboardButton("âš ï¸ Emergency / Delay", callback_data="emergency")],
+                [InlineKeyboardButton("ðŸ End Session",        callback_data="end_session")],
             ])
         )
         return
@@ -988,7 +999,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "emergency":
         if not is_admin(uid): return
         context.user_data["awaiting_emergency"] = True
-        await q.message.reply_text("⚠️ *Emergency Message*\n\nType your message — sent to VIP immediately.", parse_mode="Markdown")
+        await q.message.reply_text("âš ï¸ *Emergency Message*\n\nType your message â€” sent to VIP immediately.", parse_mode="Markdown")
         return
 
     # END SESSION
@@ -998,7 +1009,10 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text       = msg_session_end(SESSION_STATS["wins"], SESSION_STATS["losses"])
         session_id = str(int(time.time()))
         record_session_weekly()
-        fb_text    = "\n\n━━━━━━━━━━━━━━━━━━\n\U0001f4dd *Rate today's session:*\nTap a number (1 = poor, 5 = excellent)"
+        # Record session end in full log
+        FULL_SESSION_LOG.append({"type": "sticker", "content": SESSION_CLOSE_STICKER})
+        FULL_SESSION_LOG.append({"type": "text",    "content": text})
+        fb_text    = "\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f4dd *Rate today's session:*\nTap a number (1 = poor, 5 = excellent)"
         fb_kb      = kb_feedback(session_id)
         for vid in vip_ids:
             try: await context.bot.send_sticker(chat_id=vid, sticker=SESSION_CLOSE_STICKER, protect_content=True)
@@ -1081,35 +1095,25 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text=channel_stats,
                 parse_mode="Markdown"
             )
-            await q.answer("✅ Session stats sent to channel!", show_alert=True)
+            await q.answer("âœ… Session stats sent to channel!", show_alert=True)
         except Exception as e:
-            await q.answer(f"❌ Failed: {e}", show_alert=True)
+            await q.answer(f"âŒ Failed: {e}", show_alert=True)
         return
 
     # Replay session to admin only (preview)
     if data.startswith("replay_admin_"):
         if not is_admin(uid): return
-        if not SESSION_LOG:
-            await q.answer("No signals recorded this session.", show_alert=True)
+        if not FULL_SESSION_LOG:
+            await q.answer("No session recorded yet.", show_alert=True)
             return
-        await q.answer("Sending replay to you now...", show_alert=False)
-        for entry in SESSION_LOG:
-            pair_r  = entry["pair"]; exp_r = entry["expiry"]
-            dir_r   = entry["direction"]; res_r = entry["result"]; cnt_r = entry["count"]
-            icon_r  = "✅" if res_r == "WIN" else "❌"
-            stk_dir = BUY_STICKER if dir_r == "BUY" else SELL_STICKER
-            stk_res = WIN_STICKER if res_r == "WIN" else LOSS_STICKER
-            dir_msg = msg_direction(pair_r, exp_r, dir_r)
-            res_msg = msg_win(pair_r, exp_r, dir_r, cnt_r) if res_r == "WIN" else msg_loss(pair_r, exp_r, dir_r, cnt_r)
+        await q.answer("Sending full preview to you now...", show_alert=False)
+        for entry in FULL_SESSION_LOG:
             try:
-                await context.bot.send_message(chat_id=uid, text=dir_msg, parse_mode="Markdown")
-                if USE_STICKERS and "PASTE_" not in stk_dir:
-                    await context.bot.send_sticker(chat_id=uid, sticker=stk_dir)
-                await asyncio.sleep(1.5)
-                await context.bot.send_message(chat_id=uid, text=res_msg, parse_mode="Markdown")
-                if USE_STICKERS and "PASTE_" not in stk_res:
-                    await context.bot.send_sticker(chat_id=uid, sticker=stk_res)
-                await asyncio.sleep(2)
+                if entry["type"] == "text":
+                    await context.bot.send_message(chat_id=uid, text=entry["content"], parse_mode="Markdown")
+                elif entry["type"] == "sticker":
+                    await context.bot.send_sticker(chat_id=uid, sticker=entry["content"])
+                await asyncio.sleep(1.2)
             except Exception as e:
                 logger.warning(f"Replay admin failed: {e}")
         return
@@ -1125,13 +1129,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await q.answer("No non-VIP members found.", show_alert=True)
             return
         await q.edit_message_text(
-            f"📢 *Sending session replay to {len(novip_ids)} non-VIP members...*",
+            f"ðŸ“¢ *Sending session replay to {len(novip_ids)} non-VIP members...*",
             parse_mode="Markdown"
         )
         for entry in SESSION_LOG:
             pair_r = entry["pair"]; exp_r = entry["expiry"]
             dir_r  = entry["direction"]; res_r = entry["result"]; cnt_r = entry["count"]
-            icon_r = "✅" if res_r == "WIN" else "❌"
+            icon_r = "âœ…" if res_r == "WIN" else "âŒ"
             stk_dir = BUY_STICKER if dir_r == "BUY" else SELL_STICKER
             stk_res = WIN_STICKER if res_r == "WIN" else LOSS_STICKER
             dir_msg = msg_direction(pair_r, exp_r, dir_r)
@@ -1175,14 +1179,14 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     chat_id=nuid, text=promo,
                     parse_mode="Markdown", protect_content=True,
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔑 Get VIP Access", callback_data="enter_code"),
-                        InlineKeyboardButton("💬 Contact Admin",  url=SUPPORT_URL),
+                        InlineKeyboardButton("ðŸ”‘ Get VIP Access", callback_data="enter_code"),
+                        InlineKeyboardButton("ðŸ’¬ Contact Admin",  url=SUPPORT_URL),
                     ]])
                 )
             except: pass
         await context.bot.send_message(
             chat_id=uid,
-            text=f"✅ *Replay sent to {len(novip_ids)} non-VIP members!*",
+            text=f"âœ… *Replay sent to {len(novip_ids)} non-VIP members!*",
             parse_mode="Markdown"
         )
         return
@@ -1218,13 +1222,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     chat_id=nuid, text=results_msg,
                     parse_mode="Markdown", protect_content=True,
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔑 Get VIP Access", callback_data="enter_code"),
-                        InlineKeyboardButton("💬 Contact Admin",  url=SUPPORT_URL),
+                        InlineKeyboardButton("ðŸ”‘ Get VIP Access", callback_data="enter_code"),
+                        InlineKeyboardButton("ðŸ’¬ Contact Admin",  url=SUPPORT_URL),
                     ]])
                 )
                 sent += 1
             except: pass
-        await q.answer(f"✅ Sent to {sent} non-VIP members!", show_alert=True)
+        await q.answer(f"âœ… Sent to {sent} non-VIP members!", show_alert=True)
         return
 
     if data.startswith("fb_"):
@@ -1235,7 +1239,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["fb_waiting"] = True
         await q.edit_message_reply_markup(reply_markup=None)
         await context.bot.send_message(chat_id=chat,
-            text=f"Thank you! You rated: *{'⭐'*rating}*\n\nType a comment or /skip:",
+            text=f"Thank you! You rated: *{'â­'*rating}*\n\nType a comment or /skip:",
             parse_mode="Markdown")
         return
 
@@ -1244,7 +1248,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parts  = data.split("_", 2)
         action = parts[1]; sig_id = parts[2]
         signals = load_signals()
-        if sig_id not in signals: await q.edit_message_text("⚠️ Signal not found."); return
+        if sig_id not in signals: await q.edit_message_text("âš ï¸ Signal not found."); return
         sig = signals[sig_id]; pair = sig["pair"]; expiry = sig["expiry"]
         trades = sig.get("trades", 1); msgs = sig["msgs"]
 
@@ -1254,11 +1258,15 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         text=msg_cancelled(pair), parse_mode="Markdown")
                 except: pass
             del signals[sig_id]; save_signals(signals)
-            await q.edit_message_text(f"❌ Signal *{pair}* cancelled.", parse_mode="Markdown")
+            await q.edit_message_text(f"âŒ Signal *{pair}* cancelled.", parse_mode="Markdown")
             return
 
         direction_text = msg_direction(pair, expiry, action, trades)
         sticker_id     = BUY_STICKER if action == "BUY" else SELL_STICKER
+        # Record direction in full session log
+        FULL_SESSION_LOG.append({"type": "text",    "content": direction_text})
+        if USE_STICKERS and sticker_id and "PASTE_" not in sticker_id:
+            FULL_SESSION_LOG.append({"type": "sticker", "content": sticker_id})
         for uid_str in msgs:
             uidint = int(uid_str)
             try: await context.bot.send_message(chat_id=uidint, text=direction_text, parse_mode="Markdown", protect_content=True)
@@ -1268,14 +1276,14 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except Exception as e: logger.warning(f"Dir stk failed {uid_str}: {e}")
         signals[sig_id]["direction"] = action; save_signals(signals)
 
-        arrow   = "📈" if action == "BUY" else "📉"
-        color   = "🟢" if action == "BUY" else "🔴"
+        arrow   = "ðŸ“ˆ" if action == "BUY" else "ðŸ“‰"
+        color   = "ðŸŸ¢" if action == "BUY" else "ðŸ”´"
         display = get_display_count()
         # FIX 6: show display count
         await q.edit_message_text(
             f"{arrow} *{color} {action}* sent for *{pair}*!\n\n"
-            f"📨 Sent to : *{display}* members\n\n"
-            "Select result when trade closes 👇",
+            f"ðŸ“¨ Sent to : *{display}* members\n\n"
+            "Select result when trade closes ðŸ‘‡",
             parse_mode="Markdown", reply_markup=kb_result(sig_id)
         )
         return
@@ -1302,7 +1310,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not novip_ids:
             await q.answer("No non-VIP members found.", show_alert=True)
             return
-        icon_nv = "✅" if nv_result == "WIN" else "❌"
+        icon_nv = "âœ…" if nv_result == "WIN" else "âŒ"
         wins_nv  = SESSION_STATS["wins"]; losses_nv = SESSION_STATS["losses"]
         total_nv = wins_nv + losses_nv
         acc_nv   = f"{(wins_nv/total_nv*100):.1f}%" if total_nv > 0 else "N/A"
@@ -1329,13 +1337,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     chat_id=nuid, text=novip_msg,
                     parse_mode="Markdown", protect_content=True,
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("🔑 Get VIP Access", callback_data="enter_code"),
-                        InlineKeyboardButton("💬 Contact Admin",  url=SUPPORT_URL),
+                        InlineKeyboardButton("ðŸ”‘ Get VIP Access", callback_data="enter_code"),
+                        InlineKeyboardButton("ðŸ’¬ Contact Admin",  url=SUPPORT_URL),
                     ]])
                 )
                 sent_nv += 1
             except: pass
-        await q.answer(f"✅ Sent to {sent_nv} non-VIP members!", show_alert=True)
+        await q.answer(f"âœ… Sent to {sent_nv} non-VIP members!", show_alert=True)
         return
 
     # Forward result summary to channel
@@ -1351,19 +1359,19 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         losses_now = SESSION_STATS["losses"]
         total_now  = wins_now + losses_now
         acc_now    = f"{(wins_now/total_now*100):.1f}%" if total_now > 0 else "N/A"
-        icon_now   = "✅" if fwd_result == "WIN" else "❌"
+        icon_now   = "âœ…" if fwd_result == "WIN" else "âŒ"
         channel_text = (
             f"\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-            "━━━━━━━━━━━━━━\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
             f"\U0001f4ca PAIR      : *{fwd_pair}*\n"
             f"{icon_now} RESULT    : *{fwd_result} x{fwd_count}*\n"
-            "━━━━━━━━━━━━━━\n\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
             "\U0001f4ca *SESSION SO FAR:*\n"
-            "━━━━━━━━━━━━━━\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
             f"\u2705 WIN      : *{wins_now}*\n"
             f"\u274c LOSS     : *{losses_now}*\n"
             f"\U0001f4c8 ACCURACY : *{acc_now}*\n"
-            "━━━━━━━━━━━━━━\n\n"
+            "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\n"
             f"{KAULI_MBIU}"
         )
         try:
@@ -1372,18 +1380,18 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 text=channel_text,
                 parse_mode="Markdown"
             )
-            await q.answer("✅ Sent to channel!", show_alert=True)
+            await q.answer("âœ… Sent to channel!", show_alert=True)
         except Exception as e:
-            await q.answer(f"❌ Failed: {e}", show_alert=True)
+            await q.answer(f"âŒ Failed: {e}", show_alert=True)
         return
 
     # FIX 5: clear feedback properly saved to Supabase
     if data == "clear_feedback":
         if not is_admin(uid): return
         save_feedback([])
-        await q.edit_message_text("🗑️ *All feedback cleared!*", parse_mode="Markdown"); return
+        await q.edit_message_text("ðŸ—‘ï¸ *All feedback cleared!*", parse_mode="Markdown"); return
 
-    # /channelfeedback — toggle selection checkbox
+    # /channelfeedback â€” toggle selection checkbox
     if data.startswith("cf_toggle_"):
         if not is_admin(uid): return
         idx = int(data.split("_")[2])
@@ -1391,10 +1399,10 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         entries  = context.user_data.get("cf_entries", [])
         if idx in selected:
             selected.discard(idx)
-            label = "☐ Select"
+            label = "â˜ Select"
         else:
             selected.add(idx)
-            label = "✅ Selected"
+            label = "âœ… Selected"
         context.user_data["cf_selected"] = selected
         entry = entries[idx] if idx < len(entries) else {}
         try:
@@ -1404,28 +1412,28 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ]])
             )
         except: pass
-        await q.answer(f"{'Selected ✅' if label == '✅ Selected' else 'Deselected ☐'}")
+        await q.answer(f"{'Selected âœ…' if label == 'âœ… Selected' else 'Deselected â˜'}")
         return
 
-    # /channelfeedback — forward selected entries to channel
+    # /channelfeedback â€” forward selected entries to channel
     if data == "cf_forward":
         if not is_admin(uid): return
         selected = context.user_data.get("cf_selected", set())
         entries  = context.user_data.get("cf_entries", [])
         if not selected:
-            await q.answer("⚠️ No entries selected!", show_alert=True)
+            await q.answer("âš ï¸ No entries selected!", show_alert=True)
             return
-        await q.edit_message_text("📢 *Forwarding to channel...*", parse_mode="Markdown")
+        await q.edit_message_text("ðŸ“¢ *Forwarding to channel...*", parse_mode="Markdown")
         count = 0
         for idx in sorted(selected):
             if idx >= len(entries): continue
             entry = entries[idx]
             channel_text = (
                 f"{entry['stars']}\n"
-                f"👤 *{entry['name']}*\n"
-                f"💬 _{entry['comment']}_\n\n"
-                f"⚡ *EVALON VIP SIGNALS*\n"
-                f"📲 @EvalonwinnersBot"
+                f"ðŸ‘¤ *{entry['name']}*\n"
+                f"ðŸ’¬ _{entry['comment']}_\n\n"
+                f"âš¡ *EVALON VIP SIGNALS*\n"
+                f"ðŸ“² @EvalonwinnersBot"
             )
             try:
                 await context.bot.send_message(
@@ -1439,12 +1447,12 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.warning(f"cf channel send failed: {e}")
         context.user_data["cf_selected"] = set()
         await q.edit_message_text(
-            f"✅ *Done! Forwarded {count} feedback(s) to channel.*",
+            f"âœ… *Done! Forwarded {count} feedback(s) to channel.*",
             parse_mode="Markdown"
         )
         return
 
-    # Feedback approval — admin taps ✅ Approve or ❌ Reject on individual pending item
+    # Feedback approval â€” admin taps âœ… Approve or âŒ Reject on individual pending item
     if data.startswith("fb_approve_") or data.startswith("fb_reject_"):
         if not is_admin(uid): return
         fb_id   = data.split("_", 2)[2]
@@ -1453,19 +1461,19 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         entry   = next((f for f in fb_list if f.get("id") == fb_id), None)
 
         if not entry:
-            await q.edit_message_text("⚠️ Feedback not found.", parse_mode="Markdown")
+            await q.edit_message_text("âš ï¸ Feedback not found.", parse_mode="Markdown")
             return
 
         entry["pending"]  = False
         entry["approved"] = approve
         save_feedback(fb_list)
 
-        stars_str = "⭐" * entry.get("rating", 5)
+        stars_str = "â­" * entry.get("rating", 5)
         comment   = entry.get("comment", "")
         fb_name   = entry.get("name", "Trader")
-        status    = "✅ *Approved*" if approve else "❌ *Rejected*"
+        status    = "âœ… *Approved*" if approve else "âŒ *Rejected*"
         await q.edit_message_text(
-            f"{status}\n\n👤 *{fb_name}*\n{stars_str}\n💬 _{comment}_",
+            f"{status}\n\nðŸ‘¤ *{fb_name}*\n{stars_str}\nðŸ’¬ _{comment}_",
             parse_mode="Markdown"
         )
         return
@@ -1476,19 +1484,19 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         fb_list  = load_feedback()
         approved = [f for f in fb_list if f.get("approved") and not f.get("forwarded")]
         if not approved:
-            await q.edit_message_text("⚠️ No approved feedback to forward.", parse_mode="Markdown")
+            await q.edit_message_text("âš ï¸ No approved feedback to forward.", parse_mode="Markdown")
             return
         count = 0
         for entry in approved:
-            stars_str = "⭐" * entry.get("rating", 5)
+            stars_str = "â­" * entry.get("rating", 5)
             comment   = entry.get("comment", "")
             fb_name   = entry.get("name", "Trader")
             channel_text = (
                 f"{stars_str}\n"
-                f"👤 *{fb_name}*\n"
-                f"💬 _{comment}_\n\n"
-                f"⚡ *EVALON VIP SIGNALS*\n"
-                f"📲 @EvalonwinnersBot"
+                f"ðŸ‘¤ *{fb_name}*\n"
+                f"ðŸ’¬ _{comment}_\n\n"
+                f"âš¡ *EVALON VIP SIGNALS*\n"
+                f"ðŸ“² @EvalonwinnersBot"
             )
             try:
                 await context.bot.send_message(
@@ -1503,7 +1511,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.warning(f"Channel forward failed: {e}")
         save_feedback(fb_list)
         await q.edit_message_text(
-            f"✅ *Forwarded {count} feedback(s) to channel!*",
+            f"âœ… *Forwarded {count} feedback(s) to channel!*",
             parse_mode="Markdown"
         )
         return
@@ -1517,7 +1525,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             status = member.status
             # Accept: member, administrator, creator, or restricted (still in channel)
-            # Also accept: left with pending request — caught below
+            # Also accept: left with pending request â€” caught below
             if status in ("member", "administrator", "creator", "restricted"):
                 is_member = True
         except Exception as e:
@@ -1527,11 +1535,11 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not is_member:
             # Check if they have a pending join request via get_chat_member returning 'left'
-            # Telegram doesn't expose pending requests directly — we check via ChatMember
+            # Telegram doesn't expose pending requests directly â€” we check via ChatMember
             # Strategy: if status is 'left' we check if they tapped join (we can't verify)
             # Show them a message to send request first
             await q.answer(
-                "⚠️ You have not joined yet. Please send a join request first.",
+                "âš ï¸ You have not joined yet. Please send a join request first.",
                 show_alert=True
             )
             return
@@ -1539,20 +1547,20 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update_user(uid, {"joined_channel": True, "name": name})
         try: await q.message.delete()
         except: pass
-        mday = "🟢 Market open!" if is_market_day() else "🔴 Weekend — resumes Monday."
+        mday = "ðŸŸ¢ Market open!" if is_market_day() else "ðŸ”´ Weekend â€” resumes Monday."
         if is_vip(uid):
             await context.bot.send_message(chat_id=chat,
-                text=f"✅ *Joined! Welcome back, {name}!*\n\n{mday}",
+                text=f"âœ… *Joined! Welcome back, {name}!*\n\n{mday}",
                 parse_mode="Markdown", reply_markup=kb_support(), protect_content=True)
         else:
             await context.bot.send_message(chat_id=chat,
-                text=f"✅ *Channel joined! Welcome, {name}!*\n\n"
-                     "🔒 *VIP ACCESS REQUIRED*\n\n"
-                     "✅ Real market signals — Mon to Fri\n"
-                     "✅ Non-Martingale strategy\n"
-                     "✅ Win/Loss updates\n\n"
-                     f"⏰ Mon–Fri only | {mday}\n\n"
-                     "🔑 Have a VIP code? Tap below 👇",
+                text=f"âœ… *Channel joined! Welcome, {name}!*\n\n"
+                     "ðŸ”’ *VIP ACCESS REQUIRED*\n\n"
+                     "âœ… Real market signals â€” Mon to Fri\n"
+                     "âœ… Non-Martingale strategy\n"
+                     "âœ… Win/Loss updates\n\n"
+                     f"â° Monâ€“Fri only | {mday}\n\n"
+                     "ðŸ”‘ Have a VIP code? Tap below ðŸ‘‡",
                 parse_mode="Markdown", reply_markup=kb_locked(), protect_content=True)
         return
 
@@ -1561,9 +1569,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try: await q.message.delete()
         except: pass
         await context.bot.send_message(chat_id=chat,
-            text="🔑 *Enter your VIP code:*\n\nFormat: `VIP-XXXX-XXXX-XXXX`\n\nContact admin if you need one 👇",
+            text="ðŸ”‘ *Enter your VIP code:*\n\nFormat: `VIP-XXXX-XXXX-XXXX`\n\nContact admin if you need one ðŸ‘‡",
             parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💬 Contact Admin", url=SUPPORT_URL)]]))
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)]]))
         return
 
 # ============================================================
@@ -1578,7 +1586,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try: await update.message.delete()
         except: pass
         await update.message.reply_text(
-            "🔒 *Forwarding is not allowed in this bot.*\n\nAll content is protected.",
+            "ðŸ”’ *Forwarding is not allowed in this bot.*\n\nAll content is protected.",
             parse_mode="Markdown"
         )
         return
@@ -1591,14 +1599,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             vip_ids = get_vip_ids()
             await send_to_list(context, vip_ids, text=(
                 "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-                "━━━━━━━━━━━━━━"+"\n⚠️ *IMPORTANT UPDATE*\n"+"━━━━━━━━━━━━━━"+"\n\n"
+                "â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\nâš ï¸ *IMPORTANT UPDATE*\n"+"â”â”â”â”â”â”â”â”â”â”â”â”â”â”"+"\n\n"
                 f"{text}\n\n\U0001f48e VVIP MEMBERS ONLY"
             ))
-            await update.message.reply_text("⚠️ *Emergency message sent!*", parse_mode="Markdown", protect_content=True,
+            await update.message.reply_text("âš ï¸ *Emergency message sent!*", parse_mode="Markdown", protect_content=True,
                 reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🟢 Send Session Start Now", callback_data="send_start_now")],
-                    [InlineKeyboardButton("⚠️ Emergency / Delay", callback_data="emergency")],
-                    [InlineKeyboardButton("🏁 End Session", callback_data="end_session")],
+                    [InlineKeyboardButton("ðŸŸ¢ Send Session Start Now", callback_data="send_start_now")],
+                    [InlineKeyboardButton("âš ï¸ Emergency / Delay", callback_data="emergency")],
+                    [InlineKeyboardButton("ðŸ End Session", callback_data="end_session")],
                 ]))
             return
 
@@ -1606,9 +1614,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         trades_count = parse_trades_only(text)
         if trades_count is not None:
             vip_ids = get_vip_ids()
-            if not vip_ids: await update.message.reply_text("⚠️ No VIP members yet."); return
+            if not vip_ids: await update.message.reply_text("âš ï¸ No VIP members yet."); return
             context.user_data["last_trades"] = trades_count
-            trade_msg = f"💥 *OPEN {trades_count} TRADES NOW!* 💥"
+            trade_msg = f"ðŸ’¥ *OPEN {trades_count} TRADES NOW!* ðŸ’¥"
             await send_to_list(context, vip_ids, text=trade_msg)
             try: await update.message.delete()
             except: pass
@@ -1620,7 +1628,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pair, expiry = parsed
         context.user_data["last_trades"] = 1  # reset on new signal
         vip_ids = get_vip_ids()
-        if not vip_ids: await update.message.reply_text("⚠️ No VIP members yet."); return
+        if not vip_ids: await update.message.reply_text("âš ï¸ No VIP members yet."); return
         try: await update.message.delete()
         except: pass
 
@@ -1640,9 +1648,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         display = get_display_count()
         await context.bot.send_message(chat_id=uid,
-            text=f"✅ Signal sent to *{display}* members!\n\n"
-                 f"📊 *{pair}*  |  ⏱ *{expiry} MIN*\n\n"
-                 "Choose direction when ready 👇",
+            text=f"âœ… Signal sent to *{display}* members!\n\n"
+                 f"ðŸ“Š *{pair}*  |  â± *{expiry} MIN*\n\n"
+                 "Choose direction when ready ðŸ‘‡",
             parse_mode="Markdown", reply_markup=kb_direction(sig_id))
         return
 
@@ -1670,26 +1678,13 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         fb_list.append(fb_entry)
         save_feedback(fb_list)
 
-        # Thank the member
+        # Thank the member â€” no admin notification (feedback saved silently)
         await update.message.reply_text(
-            "✅ *Thank you for your feedback!*\n\nSee you in the next session! 🎯",
+            "âœ… *Thank you for your feedback!*\n\nSee you in the next session! ðŸŽ¯",
             parse_mode="Markdown"
         )
-
-        # Notify admin — simple ping, full review via /reviewfeedback
-        try:
-            await context.bot.send_message(
-                chat_id=ADMIN_ID,
-                text=(
-                    f"📩 *New Feedback — {name}*\n\n"
-                    f"{'⭐' * rating}\n"
-                    f"💬 _{comment}_\n\n"
-                    f"Use /reviewfeedback to approve & forward to channel."
-                ),
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            logger.warning(f"Admin feedback notify failed: {e}")
+        # Feedback saved silently â€” admin can view anytime via /realfeedbacks
+        logger.info(f"Feedback saved silently: user={uid} name={name} rating={rating} id={fb_id}")
         return
 
     # Accept code directly even without pressing button first
@@ -1698,10 +1693,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if text.upper().startswith("VIP-"):
             context.user_data["awaiting_code"] = True
         elif not is_vip(uid):
-            await update.message.reply_text("🔒 Please enter your VIP code.", reply_markup=kb_locked())
+            await update.message.reply_text("ðŸ”’ Please enter your VIP code.", reply_markup=kb_locked())
             return
         else:
-            return  # VIP user sent random text — ignore silently
+            return  # VIP user sent random text â€” ignore silently
 
     # Safety: only treat as code if it really looks like one
     if not text.upper().startswith("VIP-"):
@@ -1711,35 +1706,35 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     code = text.upper()
     context.user_data["awaiting_code"] = False
     if activate_code(code, uid, name):
-        mday = "🟢 Market open — signals active!" if is_market_day() else "🔴 Weekend — signals resume Monday."
+        mday = "ðŸŸ¢ Market open â€” signals active!" if is_market_day() else "ðŸ”´ Weekend â€” signals resume Monday."
         await update.message.reply_text(
-            f"✅ *VIP Access Activated! Welcome, {name}!* 🎉\n\n"
-            "⚡ *EVALON VIP SIGNALS*\n\nYou are now a *VIP Member* 🎯\n\n"
-            "✅ Real market signals — Mon to Fri\n✅ Non-Martingale strategy\n"
-            f"✅ Win/Loss updates\n\n{mday}\n\nStay active — signals arrive here 📩",
+            f"âœ… *VIP Access Activated! Welcome, {name}!* ðŸŽ‰\n\n"
+            "âš¡ *EVALON VIP SIGNALS*\n\nYou are now a *VIP Member* ðŸŽ¯\n\n"
+            "âœ… Real market signals â€” Mon to Fri\nâœ… Non-Martingale strategy\n"
+            f"âœ… Win/Loss updates\n\n{mday}\n\nStay active â€” signals arrive here ðŸ“©",
             parse_mode="Markdown", reply_markup=kb_support(), protect_content=True)
     else:
         db   = load_db(); cdat = db["codes"].get(code)
         if cdat and cdat.get("used"):
             await update.message.reply_text(
-                "❌ *This code has already been used!*\n\nContact admin for your own code:",
+                "âŒ *This code has already been used!*\n\nContact admin for your own code:",
                 parse_mode="Markdown", reply_markup=kb_locked(), protect_content=True)
         else:
-            await update.message.reply_text("❌ *Invalid VIP code!*\n\nContact admin:",
+            await update.message.reply_text("âŒ *Invalid VIP code!*\n\nContact admin:",
                 parse_mode="Markdown", reply_markup=kb_locked(), protect_content=True)
 
 # ============================================================
-# MEDIA — FIX 8: direct to VIP with watermark, no file_id
+# MEDIA â€” FIX 8: direct to VIP with watermark, no file_id
 # ============================================================
 async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     if not is_admin(uid):
         if context.user_data.get("fb_waiting"):
-            await update.message.reply_text("✏️ Please send text only or /skip.", parse_mode="Markdown"); return
+            await update.message.reply_text("âœï¸ Please send text only or /skip.", parse_mode="Markdown"); return
         if update.message.forward_date:
             try: await update.message.delete()
             except: pass
-            await update.message.reply_text("🔒 Forwarding is not allowed.")
+            await update.message.reply_text("ðŸ”’ Forwarding is not allowed.")
         return
 
     if context.user_data.get("awaiting_welcome_image"):
@@ -1747,9 +1742,9 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = update.message
         if msg.photo:
             db = load_db(); db["welcome_image"] = msg.photo[-1].file_id; save_db(db)
-            await update.message.reply_text("✅ *Welcome image saved!*", parse_mode="Markdown")
+            await update.message.reply_text("âœ… *Welcome image saved!*", parse_mode="Markdown")
         else:
-            await update.message.reply_text("❌ Please send a photo only.")
+            await update.message.reply_text("âŒ Please send a photo only.")
         return
 
     # FIX 8: if /getid mode active, reply with file_id
@@ -1760,17 +1755,17 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif msg.video: fid = f"VIDEO: `{msg.video.file_id}`"
         elif msg.animation: fid = f"GIF: `{msg.animation.file_id}`"
         if fid:
-            await update.message.reply_text(f"📎 *FILE ID:*\n\n{fid}", parse_mode="Markdown"); return
+            await update.message.reply_text(f"ðŸ“Ž *FILE ID:*\n\n{fid}", parse_mode="Markdown"); return
 
-    # Default: photo → VIP only (with watermark), video → VIP + Non-VIP
+    # Default: photo â†’ VIP only (with watermark), video â†’ VIP + Non-VIP
     msg = update.message
     vip_ids   = get_vip_ids()
     novip_ids = get_novip_ids()
     all_ids   = get_all_ids()
     sent = 0
     if msg.photo:
-        # Photo → VIP only
-        if not vip_ids: await msg.reply_text("⚠️ No VIP members yet."); return
+        # Photo â†’ VIP only
+        if not vip_ids: await msg.reply_text("âš ï¸ No VIP members yet."); return
         try:
             file = await context.bot.get_file(msg.photo[-1].file_id)
             raw_img = bytes(await file.download_as_bytearray())
@@ -1791,12 +1786,12 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.warning(f"Photo send failed {vid}: {e}")
         if sent:
-            await msg.reply_text(f"✅ Photo sent to *{sent}* VIP members!", parse_mode="Markdown")
+            await msg.reply_text(f"âœ… Photo sent to *{sent}* VIP members!", parse_mode="Markdown")
     elif msg.video:
-        # Video → VIP + Non-VIP (everyone)
-        wm_caption = f"{msg.caption}\n\n📹 @EvalonwinnersBot" if msg.caption else "📹 @EvalonwinnersBot"
+        # Video â†’ VIP + Non-VIP (everyone)
+        wm_caption = f"{msg.caption}\n\nðŸ“¹ @EvalonwinnersBot" if msg.caption else "ðŸ“¹ @EvalonwinnersBot"
         targets = list(set(vip_ids + novip_ids))
-        if not targets: await msg.reply_text("⚠️ No members yet."); return
+        if not targets: await msg.reply_text("âš ï¸ No members yet."); return
         sent_vip = sent_novip = 0
         for tid in targets:
             try:
@@ -1807,14 +1802,14 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.warning(f"Video send failed {tid}: {e}")
         await msg.reply_text(
-            f"✅ Video sent!\n\n💎 VIP: *{sent_vip}* | 🔓 Non-VIP: *{sent_novip}*",
+            f"âœ… Video sent!\n\nðŸ’Ž VIP: *{sent_vip}* | ðŸ”“ Non-VIP: *{sent_novip}*",
             parse_mode="Markdown"
         )
     elif msg.animation:
         targets = list(set(vip_ids + novip_ids))
         sent, _ = await send_to_list(context, targets, animation=msg.animation.file_id, caption=msg.caption)
         if sent:
-            await msg.reply_text(f"✅ GIF sent to *{sent}* members!", parse_mode="Markdown")
+            await msg.reply_text(f"âœ… GIF sent to *{sent}* members!", parse_mode="Markdown")
 
 # ============================================================
 # STICKER HANDLER
@@ -1825,7 +1820,7 @@ async def handle_sticker(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if update.message.forward_date:
             try: await update.message.delete()
             except: pass
-            await update.message.reply_text("🔒 Forwarding is not allowed.")
+            await update.message.reply_text("ðŸ”’ Forwarding is not allowed.")
         return
     sticker = update.message.sticker
     if not sticker: return
@@ -1834,22 +1829,22 @@ async def handle_sticker(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("awaiting_file_id"):
         context.user_data["awaiting_file_id"] = False
         await update.message.reply_text(
-            f"📎 *STICKER FILE ID:*\n\n`{fid}`\n\nPaste into BUY/SELL/WIN/LOSS sticker variables.",
+            f"ðŸ“Ž *STICKER FILE ID:*\n\n`{fid}`\n\nPaste into BUY/SELL/WIN/LOSS sticker variables.",
             parse_mode="Markdown"); return
     # Default: broadcast sticker
     vip_ids = get_vip_ids()
     if vip_ids:
         await send_to_list(context, vip_ids, sticker=fid)
         display = get_display_count()
-        await update.message.reply_text(f"✅ Sticker sent to *{display}* members!", parse_mode="Markdown")
+        await update.message.reply_text(f"âœ… Sticker sent to *{display}* members!", parse_mode="Markdown")
 
 # ============================================================
-# /getid — get file_id of next sticker/photo
+# /getid â€” get file_id of next sticker/photo
 # ============================================================
 async def cmd_getid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     context.user_data["awaiting_file_id"] = True
-    await update.message.reply_text("📎 *Send sticker or photo now*\n\nI will reply with the file\\_id.", parse_mode="Markdown")
+    await update.message.reply_text("ðŸ“Ž *Send sticker or photo now*\n\nI will reply with the file\\_id.", parse_mode="Markdown")
 
 # ============================================================
 # /broadcast
@@ -1862,7 +1857,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     caption = " ".join(args[1:]) if to_all else " ".join(args)
     replied = update.message.reply_to_message
     targets = get_all_ids() if to_all else get_vip_ids()
-    if not targets: await update.message.reply_text("⚠️ No users yet."); return
+    if not targets: await update.message.reply_text("âš ï¸ No users yet."); return
     sent = 0
     if replied:
         if replied.photo:
@@ -1886,7 +1881,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except Exception as e:
                     logger.warning(f"Broadcast photo failed {tid}: {e}")
         elif replied.video:
-            wm_caption = f"{replied.caption or caption or ''}\n\n📹 @EvalonwinnersBot".strip()
+            wm_caption = f"{replied.caption or caption or ''}\n\nðŸ“¹ @EvalonwinnersBot".strip()
             sent, _ = await send_to_list(context, targets, video=replied.video.file_id, caption=wm_caption)
         elif replied.sticker: sent, _ = await send_to_list(context, targets, sticker=replied.sticker.file_id)
         elif replied.animation: sent, _ = await send_to_list(context, targets, animation=replied.animation.file_id, caption=replied.caption or caption or None)
@@ -1895,18 +1890,18 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sent, _ = await send_to_list(context, targets, text=caption, parse_mode="Markdown")
     else:
         await update.message.reply_text(
-            "📢 *Broadcast:*\n`/broadcast text` → VIP\n`/broadcast all text` → Everyone\nOr reply to media.",
+            "ðŸ“¢ *Broadcast:*\n`/broadcast text` â†’ VIP\n`/broadcast all text` â†’ Everyone\nOr reply to media.",
             parse_mode="Markdown"); return
     who = "everyone" if to_all else "VIP"
     display = get_display_count()
-    await update.message.reply_text(f"📡 *Broadcast complete!*\n👥 {who} | ✅ Sent to *{display}* members", parse_mode="Markdown")
+    await update.message.reply_text(f"ðŸ“¡ *Broadcast complete!*\nðŸ‘¥ {who} | âœ… Sent to *{display}* members", parse_mode="Markdown")
 
 # ============================================================
 # /session, /end
 # ============================================================
 async def session_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
-    await update.message.reply_text("⏰ *Session start alert — select timing:*",
+    await update.message.reply_text("â° *Session start alert â€” select timing:*",
         parse_mode="Markdown", reply_markup=kb_session_timing())
 
 async def end_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1914,7 +1909,7 @@ async def end_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     vip_ids    = get_vip_ids()
     text       = msg_session_end(SESSION_STATS["wins"], SESSION_STATS["losses"])
     session_id = str(int(time.time()))
-    fb_text    = "\n\n━━━━━━━━━━━━━━━━━━\n\U0001f4dd *Rate today's session:*\nTap a number (1 = poor, 5 = excellent)"
+    fb_text    = "\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f4dd *Rate today's session:*\nTap a number (1 = poor, 5 = excellent)"
     # FIX 4: VIP only
     for vid in vip_ids:
         try: await context.bot.send_message(chat_id=vid, text=text+fb_text,
@@ -1922,12 +1917,12 @@ async def end_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except: pass
     sigs = load_signals(); sigs[f"session_{session_id}"] = {"session_id": session_id}; save_signals(sigs)
     # FIX 7: clean message
-    await update.message.reply_text("🏁 *Session ended!*\n\nTap below to see feedback 👇",
+    await update.message.reply_text("ðŸ *Session ended!*\n\nTap below to see feedback ðŸ‘‡",
         parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📊 View Feedback", callback_data=f"view_fb_{session_id}")]]))
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("ðŸ“Š View Feedback", callback_data=f"view_fb_{session_id}")]]))
 
 # ============================================================
-# /feedback — FIX 2: hide real/generated label
+# /feedback â€” FIX 2: hide real/generated label
 # ============================================================
 async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
@@ -2064,7 +2059,7 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for c in pool:
             # 40% chance remove trailing emoji for variety
             if random.random() < 0.4:
-                for em in ["🔥","💪","👑","🏆","💰","🎯","😱","🙏","👊","✅","💎","⚡","👌"]:
+                for em in ["ðŸ”¥","ðŸ’ª","ðŸ‘‘","ðŸ†","ðŸ’°","ðŸŽ¯","ðŸ˜±","ðŸ™","ðŸ‘Š","âœ…","ðŸ’Ž","âš¡","ðŸ‘Œ"]:
                     if c.endswith(em):
                         c = c[:-len(em)].strip()
                         break
@@ -2102,21 +2097,21 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return {
             "num":     get_num(),
             "name":    make_name(),
-            "stars":   "⭐" * random.choice([5,5,5,4,4,4,5,4,3,5,4,5,4,5,3,4,5,5,4,5]),
+            "stars":   "â­" * random.choice([5,5,5,4,4,4,5,4,3,5,4,5,4,5,3,4,5,5,4,5]),
             "comment": comment or win_comment()
         }
 
-    # Real feedback from DB — only approved ones (max 4)
+    # Real feedback from DB â€” only approved ones (max 4)
     real_all  = [f for f in load_feedback() if f.get("rating", 0) >= 4 and f.get("approved", False)]
     real_show = real_all[:4]
     real_entries = [{
         "num":     get_num(),
         "name":    f.get("name", "User"),
-        "stars":   "⭐" * f.get("rating", 5),
+        "stars":   "â­" * f.get("rating", 5),
         "comment": f.get("comment", "Great signals!")
     } for f in real_show]
 
-    # Build fake pool — exactly 2 "joined today" spread out
+    # Build fake pool â€” exactly 2 "joined today" spread out
     total_fake       = random.randint(25, 32)
     joined_pool      = list(JOINED_TODAY)  # already 2
     joined_positions = sorted(random.sample(range(total_fake), 2))
@@ -2130,31 +2125,38 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             fake_entries.append(make_fake())
 
-    # ORDER: 3 fake → real interleaved → remaining fake
-    first_fake = fake_entries[:3]
-    rest_fake  = fake_entries[3:]
+    # ORDER: 2-3 fake FIRST, then interleave real with remaining fakes
+    first_count = random.randint(2, 3)
+    first_fake  = fake_entries[:first_count]
+    rest_fake   = fake_entries[first_count:]
 
-    # Interleave real with rest_fake naturally
+    # Interleave real with rest_fake naturally â€” real never first
     middle = []
     ri = 0
-    for i, fe in enumerate(rest_fake):
-        if ri < len(real_entries) and i % max(1, len(rest_fake)//(len(real_entries)+1)) == 0:
+    # Space real entries evenly through the remaining fakes
+    gap = max(1, len(rest_fake) // (len(real_entries) + 1)) if real_entries else len(rest_fake)
+    next_real_at = gap  # first real appears after 'gap' fakes
+    fake_count_in_middle = 0
+    for fe in rest_fake:
+        if ri < len(real_entries) and fake_count_in_middle >= next_real_at:
             middle.append(real_entries[ri]); ri += 1
+            next_real_at = fake_count_in_middle + gap
         middle.append(fe)
-    # Append any remaining real
+        fake_count_in_middle += 1
+    # Append any remaining real at the end (still after fakes)
     while ri < len(real_entries):
         middle.append(real_entries[ri]); ri += 1
 
     all_entries = first_fake + middle
     if not all_entries:
-        await update.message.reply_text("📊 No feedback yet."); return
+        await update.message.reply_text("ðŸ“Š No feedback yet."); return
 
-    await update.message.reply_text("📊 *Sending feedback...*", parse_mode="Markdown")
+    await update.message.reply_text("ðŸ“Š *Sending feedback...*", parse_mode="Markdown")
     for entry in all_entries:
         try:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text=f"{entry['stars']} *#{entry['num']}*\n👤 *{entry['name']}*\n_\"{entry['comment']}\"_",
+                text=f"{entry['stars']} *#{entry['num']}*\nðŸ‘¤ *{entry['name']}*\n_\"{entry['comment']}\"_",
                 parse_mode="Markdown"
             )
         except Exception as e:
@@ -2163,13 +2165,13 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="✅ *Done!*",
+        text="âœ… *Done!*",
         parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗑️ Clear All Feedback", callback_data="clear_feedback")]])
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("ðŸ—‘ï¸ Clear All Feedback", callback_data="clear_feedback")]])
     )
 
 # ============================================================
-# /channelfeedback — feedback with checkboxes to forward selected to channel
+# /channelfeedback â€” feedback with checkboxes to forward selected to channel
 # ============================================================
 async def cmd_channelfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
@@ -2206,8 +2208,8 @@ async def cmd_channelfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     _jamt_cf = _cf_get_amt(_CF_SMALL + _CF_MEDIUM)
     JOINED_TODAY = [
-        f"Joined today and already ${_jamt_cf} up. This is crazy 😱",
-        f"First session here and {wins} out of {total} won. Can't believe it king 😱",
+        f"Joined today and already ${_jamt_cf} up. This is crazy ðŸ˜±",
+        f"First session here and {wins} out of {total} won. Can't believe it king ðŸ˜±",
     ]
 
     used_comments = set()
@@ -2215,47 +2217,47 @@ async def cmd_channelfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE
         a1 = _cf_get_amt(_CF_SMALL + _CF_MEDIUM)
         a2 = _cf_get_amt(_CF_LARGE + _CF_XLARGE)
         _S = [
-            f"Bro this is too good 🔥", f"King you never disappoint 👑",
-            f"Brother signals were clean today 💪", f"All {wins} hit. Not even joking",
-            f"${a1} made today. Thank you 🙏", f"On point as always bro 🎯",
-            f"${a1} profit today. Simple 💰", f"Boss you killed it today 👊",
-            f"Clean session today king 👑", f"Evalon never misses bro 🎯",
-            f"This Evalon thing is real king 💎", f"Every signal landed today bro 🔥",
-            f"${a1} richer after today's session", f"Accuracy {acc_pct}% today. Wild 👑",
-            f"Bro {wins} out of {total}. Crazy 💪", f"Never seen accuracy like this bro",
-            f"${a1} in the bag today king 🔥", f"Evalon is different bro, fr 💎",
-            f"Signals on point today. ${a1} profit", f"King every trade hit today 💪",
-            f"Bro I was ready and it paid off. ${a1} 🔥", f"No cap {acc_pct}% accuracy today 👑",
-            f"Not one loss today bro 🎯", f"${a1} and it's not even afternoon 💰",
-            f"Bro Evalon hits different every time 🔥", f"Session was clean start to finish king 👑",
-            f"Every entry was spot on today bro 💪", f"${a1} made. Simple follow and profit 🎯",
-            f"This accuracy is unreal bro. ${a1} 💎", f"Followed every signal. ${a1} in profit 🙏",
-            f"Kaka leo ilikuwa moto 🔥", f"Asante sana bro, faida nzuri leo",
-            f"Bhai aaj toh kamaal tha 🔥", f"Shukriya bhai, ${a1} profit mila 🙏",
-            f"Merci chef, {wins} sur {total} 👌", f"Perfeito hoje irmão, ${a1} 💪",
+            f"Bro this is too good ðŸ”¥", f"King you never disappoint ðŸ‘‘",
+            f"Brother signals were clean today ðŸ’ª", f"All {wins} hit. Not even joking",
+            f"${a1} made today. Thank you ðŸ™", f"On point as always bro ðŸŽ¯",
+            f"${a1} profit today. Simple ðŸ’°", f"Boss you killed it today ðŸ‘Š",
+            f"Clean session today king ðŸ‘‘", f"Evalon never misses bro ðŸŽ¯",
+            f"This Evalon thing is real king ðŸ’Ž", f"Every signal landed today bro ðŸ”¥",
+            f"${a1} richer after today's session", f"Accuracy {acc_pct}% today. Wild ðŸ‘‘",
+            f"Bro {wins} out of {total}. Crazy ðŸ’ª", f"Never seen accuracy like this bro",
+            f"${a1} in the bag today king ðŸ”¥", f"Evalon is different bro, fr ðŸ’Ž",
+            f"Signals on point today. ${a1} profit", f"King every trade hit today ðŸ’ª",
+            f"Bro I was ready and it paid off. ${a1} ðŸ”¥", f"No cap {acc_pct}% accuracy today ðŸ‘‘",
+            f"Not one loss today bro ðŸŽ¯", f"${a1} and it's not even afternoon ðŸ’°",
+            f"Bro Evalon hits different every time ðŸ”¥", f"Session was clean start to finish king ðŸ‘‘",
+            f"Every entry was spot on today bro ðŸ’ª", f"${a1} made. Simple follow and profit ðŸŽ¯",
+            f"This accuracy is unreal bro. ${a1} ðŸ’Ž", f"Followed every signal. ${a1} in profit ðŸ™",
+            f"Kaka leo ilikuwa moto ðŸ”¥", f"Asante sana bro, faida nzuri leo",
+            f"Bhai aaj toh kamaal tha ðŸ”¥", f"Shukriya bhai, ${a1} profit mila ðŸ™",
+            f"Merci chef, {wins} sur {total} ðŸ‘Œ", f"Perfeito hoje irmÃ£o, ${a1} ðŸ’ª",
         ]
         _L = [
-            f"Bro I have been trading for 2 years and never seen accuracy like this. Made ${a2} today just following the signals. Every single one hit. King you are built different 👑",
-            f"Evalon brother I was skeptical at first. But {acc_str} signals won today and I made ${a1}. This is the real deal. No more guessing 💪",
-            f"I told my friend about this after making ${a1} today. He didn't believe me so I showed him my account. Now he wants to join too 😂 Accuracy was {acc_pct}% king 👊",
-            f"I nearly gave up trading last month after losing money elsewhere. Today I made ${a1} and I finally feel confident again. Every signal was precise bro. Thank you for real 🙏",
-            f"Honestly the consistency is what gets me every time. Session after session, {acc_pct}% accuracy. Made ${a1} today and I am not even using big amounts yet 💰",
-            f"Brother I screenshotted my balance after today's session. ${a2} in profit. Evalon is changing lives king, for real 🙏🔥",
-            f"Bro {acc_pct}% accuracy today. I have tried 3 other signal groups before. None of them come close to this. ${a1} profit and I am happy 💪",
-            f"King this is the most consistent signal I have ever followed. Today {acc_str} won and I made ${a1}. My trading changed completely since I joined 🔥",
-            f"Man I used to trade randomly and lose. Now I just wait for the signal and follow it. ${a1} profit today. Discipline is key bro 💪",
-            f"I joined last week and already made back what I lost in 3 months elsewhere. Today was {acc_pct}% accuracy and ${a1} profit. Evalon is built different king 💎",
-            f"Bro I follow every signal without hesitation now. Today {acc_str} won and I cleared ${a1}. Trust the process and it pays every time 🎯",
-            f"Started with small amounts just to test. After today's {acc_pct}% accuracy and ${a1} profit I am going bigger next session. King you never miss 👑",
-            f"Bhai pehle main bahut loss karta tha dusri jagah se. Aaj {wins} mein se {wins} win hua. ${a1} profit. Evalon ka level alag hai sach mein 🙏",
-            f"Irmão hoje foi sensacional. {acc_str} sinais certos e ${a2} de lucro. Obrigado mesmo 👑",
-            f"Nimekuwa nikifuata signals kwa wiki mbili sasa. Kila session inanipa faida. Leo ${a1} tena. Asante 🙏",
+            f"Bro I have been trading for 2 years and never seen accuracy like this. Made ${a2} today just following the signals. Every single one hit. King you are built different ðŸ‘‘",
+            f"Evalon brother I was skeptical at first. But {acc_str} signals won today and I made ${a1}. This is the real deal. No more guessing ðŸ’ª",
+            f"I told my friend about this after making ${a1} today. He didn't believe me so I showed him my account. Now he wants to join too ðŸ˜‚ Accuracy was {acc_pct}% king ðŸ‘Š",
+            f"I nearly gave up trading last month after losing money elsewhere. Today I made ${a1} and I finally feel confident again. Every signal was precise bro. Thank you for real ðŸ™",
+            f"Honestly the consistency is what gets me every time. Session after session, {acc_pct}% accuracy. Made ${a1} today and I am not even using big amounts yet ðŸ’°",
+            f"Brother I screenshotted my balance after today's session. ${a2} in profit. Evalon is changing lives king, for real ðŸ™ðŸ”¥",
+            f"Bro {acc_pct}% accuracy today. I have tried 3 other signal groups before. None of them come close to this. ${a1} profit and I am happy ðŸ’ª",
+            f"King this is the most consistent signal I have ever followed. Today {acc_str} won and I made ${a1}. My trading changed completely since I joined ðŸ”¥",
+            f"Man I used to trade randomly and lose. Now I just wait for the signal and follow it. ${a1} profit today. Discipline is key bro ðŸ’ª",
+            f"I joined last week and already made back what I lost in 3 months elsewhere. Today was {acc_pct}% accuracy and ${a1} profit. Evalon is built different king ðŸ’Ž",
+            f"Bro I follow every signal without hesitation now. Today {acc_str} won and I cleared ${a1}. Trust the process and it pays every time ðŸŽ¯",
+            f"Started with small amounts just to test. After today's {acc_pct}% accuracy and ${a1} profit I am going bigger next session. King you never miss ðŸ‘‘",
+            f"Bhai pehle main bahut loss karta tha dusri jagah se. Aaj {wins} mein se {wins} win hua. ${a1} profit. Evalon ka level alag hai sach mein ðŸ™",
+            f"IrmÃ£o hoje foi sensacional. {acc_str} sinais certos e ${a2} de lucro. Obrigado mesmo ðŸ‘‘",
+            f"Nimekuwa nikifuata signals kwa wiki mbili sasa. Kila session inanipa faida. Leo ${a1} tena. Asante ðŸ™",
         ]
         pool = _S * 3 + _L
         random.shuffle(pool)
         for c in pool:
             if random.random() < 0.4:
-                for em in ["🔥","💪","👑","🏆","💰","🎯","😱","🙏","👊","✅","💎","⚡","👌"]:
+                for em in ["ðŸ”¥","ðŸ’ª","ðŸ‘‘","ðŸ†","ðŸ’°","ðŸŽ¯","ðŸ˜±","ðŸ™","ðŸ‘Š","âœ…","ðŸ’Ž","âš¡","ðŸ‘Œ"]:
                     if c.endswith(em): c = c[:-len(em)].strip(); break
             key = c[:40]
             if key not in used_comments:
@@ -2281,7 +2283,7 @@ async def cmd_channelfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE
         return {
             "num":     get_num(),
             "name":    make_name(),
-            "stars":   "⭐" * random.choice([5,5,5,4,4,4,5,4,3,5,4,5]),
+            "stars":   "â­" * random.choice([5,5,5,4,4,4,5,4,3,5,4,5]),
             "comment": comment or win_comment()
         }
 
@@ -2289,7 +2291,7 @@ async def cmd_channelfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE
     real_all   = [f for f in load_feedback() if f.get("rating", 0) >= 4 and f.get("approved", False)]
     real_show  = real_all[:4]
     real_entries = [{"num": get_num(), "name": f.get("name","User"),
-                     "stars": "⭐"*f.get("rating",5), "comment": f.get("comment","Great signals!")} for f in real_show]
+                     "stars": "â­"*f.get("rating",5), "comment": f.get("comment","Great signals!")} for f in real_show]
 
     total_fake       = random.randint(25, 32)
     joined_positions = sorted(random.sample(range(total_fake), 2))
@@ -2301,12 +2303,18 @@ async def cmd_channelfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE
         else:
             fake_entries.append(make_entry())
 
-    first_fake = fake_entries[:3]; rest_fake = fake_entries[3:]
+    first_count_cf = random.randint(2, 3)
+    first_fake = fake_entries[:first_count_cf]; rest_fake = fake_entries[first_count_cf:]
     middle = []; ri = 0
-    for i, fe in enumerate(rest_fake):
-        if ri < len(real_entries) and i % max(1, len(rest_fake)//(len(real_entries)+1)) == 0:
+    gap_cf = max(1, len(rest_fake) // (len(real_entries) + 1)) if real_entries else len(rest_fake)
+    next_real_cf = gap_cf
+    fake_cnt_cf  = 0
+    for fe in rest_fake:
+        if ri < len(real_entries) and fake_cnt_cf >= next_real_cf:
             middle.append(real_entries[ri]); ri += 1
+            next_real_cf = fake_cnt_cf + gap_cf
         middle.append(fe)
+        fake_cnt_cf += 1
     while ri < len(real_entries):
         middle.append(real_entries[ri]); ri += 1
 
@@ -2318,9 +2326,9 @@ async def cmd_channelfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     # Send header
     await update.message.reply_text(
-        f"📋 *{len(all_entries)} feedback entries ready*\n\n"
-        "Tap each one to select ✅ for forwarding to channel.\n"
-        "When done, tap *Forward Selected* 👇",
+        f"ðŸ“‹ *{len(all_entries)} feedback entries ready*\n\n"
+        "Tap each one to select âœ… for forwarding to channel.\n"
+        "When done, tap *Forward Selected* ðŸ‘‡",
         parse_mode="Markdown"
     )
 
@@ -2329,10 +2337,10 @@ async def cmd_channelfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE
         try:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text=f"{entry['stars']} *#{entry['num']}*\n👤 *{entry['name']}*\n💬 _{entry['comment']}_",
+                text=f"{entry['stars']} *#{entry['num']}*\nðŸ‘¤ *{entry['name']}*\nðŸ’¬ _{entry['comment']}_",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("☐ Select", callback_data=f"cf_toggle_{i}")
+                    InlineKeyboardButton("â˜ Select", callback_data=f"cf_toggle_{i}")
                 ]])
             )
         except Exception as e:
@@ -2342,15 +2350,15 @@ async def cmd_channelfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE
     # Forward button at the end
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="✅ *Select entries above, then forward:*",
+        text="âœ… *Select entries above, then forward:*",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("📢 Forward Selected to Channel", callback_data="cf_forward")
+            InlineKeyboardButton("ðŸ“¢ Forward Selected to Channel", callback_data="cf_forward")
         ]])
     )
 
 # ============================================================
-# /reviewfeedback — admin reviews pending feedback queue
+# /reviewfeedback â€” admin reviews pending feedback queue
 # ============================================================
 async def cmd_reviewfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
@@ -2360,18 +2368,18 @@ async def cmd_reviewfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if not pending and not approved:
         await update.message.reply_text(
-            "📭 *No pending or approved feedback.*\n\nWaiting for members to submit after sessions.",
+            "ðŸ“­ *No pending or approved feedback.*\n\nWaiting for members to submit after sessions.",
             parse_mode="Markdown"
         ); return
 
     # Show pending items one by one with approve/reject buttons
     if pending:
         await update.message.reply_text(
-            f"📋 *{len(pending)} pending feedback(s) to review:*\n\nTap ✅ to approve or ❌ to reject each one.",
+            f"ðŸ“‹ *{len(pending)} pending feedback(s) to review:*\n\nTap âœ… to approve or âŒ to reject each one.",
             parse_mode="Markdown"
         )
         for entry in pending:
-            stars_str = "⭐" * entry.get("rating", 5)
+            stars_str = "â­" * entry.get("rating", 5)
             comment   = entry.get("comment", "No comment")
             fb_name   = entry.get("name", "Trader")
             fb_id     = entry.get("id", "")
@@ -2379,15 +2387,15 @@ async def cmd_reviewfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
                 text=(
-                    f"👤 *{fb_name}*\n"
+                    f"ðŸ‘¤ *{fb_name}*\n"
                     f"{stars_str}\n"
-                    f"💬 _{comment}_\n"
-                    f"📅 {fb_date}"
+                    f"ðŸ’¬ _{comment}_\n"
+                    f"ðŸ“… {fb_date}"
                 ),
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("✅ Approve", callback_data=f"fb_approve_{fb_id}"),
-                    InlineKeyboardButton("❌ Reject",  callback_data=f"fb_reject_{fb_id}"),
+                    InlineKeyboardButton("âœ… Approve", callback_data=f"fb_approve_{fb_id}"),
+                    InlineKeyboardButton("âŒ Reject",  callback_data=f"fb_reject_{fb_id}"),
                 ]])
             )
             await asyncio.sleep(0.5)
@@ -2395,22 +2403,25 @@ async def cmd_reviewfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # Show "Forward All Approved" button if there are approved ones not yet forwarded
     if approved:
         await update.message.reply_text(
-            f"✅ *{len(approved)} approved feedback(s) ready to forward to channel.*\n\n"
+            f"âœ… *{len(approved)} approved feedback(s) ready to forward to channel.*\n\n"
             f"Tap the button below when you are ready to send them all.",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton(f"📢 Forward All ({len(approved)}) to Channel", callback_data="fb_forward_all")
+                InlineKeyboardButton(f"ðŸ“¢ Forward All ({len(approved)}) to Channel", callback_data="fb_forward_all")
             ]])
         )
 
 # ============================================================
-# /realfeedback — see only real feedback with approval status
+# /realfeedback / /realfeedbacks â€” see only real feedback with approval status
 # ============================================================
 async def cmd_realfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     fb_list = load_feedback()
     if not fb_list:
-        await update.message.reply_text("📊 No real feedback yet."); return
+        await update.message.reply_text(
+            "ðŸ“Š *No real feedback yet.*\n\nFeedback will appear here after VIP members rate sessions.\nNo notifications will be sent to you â€” check here anytime.",
+            parse_mode="Markdown"
+        ); return
 
     pending  = [f for f in fb_list if f.get("pending", False)]
     approved = [f for f in fb_list if f.get("approved", False)]
@@ -2419,28 +2430,43 @@ async def cmd_realfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ratings  = [f["rating"] for f in fb_list]
     avg      = sum(ratings)/len(ratings)
     lines    = [
-        f"📊 *REAL FEEDBACK — {len(fb_list)} total*\n"
-        f"⭐ Average: *{avg:.1f}/5*\n"
-        f"⏳ Pending: *{len(pending)}* | ✅ Approved: *{len(approved)}* | ❌ Rejected: *{len(rejected)}*\n\n"
+        f"ðŸ“Š *REAL FEEDBACK â€” {len(fb_list)} total*\n"
+        f"â­ Average: *{avg:.1f}/5*\n"
+        f"â³ Pending: *{len(pending)}* | âœ… Approved: *{len(approved)}* | âŒ Rejected: *{len(rejected)}*\n"
+        f"ðŸ”• _All feedback is saved silently â€” no admin notifications_\n\n"
     ]
 
     if pending:
-        lines.append("⏳ *PENDING APPROVAL:*\n")
+        lines.append("â³ *PENDING APPROVAL:*\n")
         for fb in pending:
-            stars = "⭐" * fb.get("rating", 0)
+            stars = "â­" * fb.get("rating", 0)
             lines.append(
-                f"🔑 `{fb.get('id','?')}` — *{fb.get('name','?')}* {stars}\n"
-                f"   💬 _{fb.get('comment','No comment')}_\n"
-                f"   📅 {fb.get('date','?')}\n\n"
+                f"ðŸ”‘ `{fb.get('id','?')}` â€” *{fb.get('name','?')}* {stars}\n"
+                f"   ðŸ’¬ _{fb.get('comment','No comment')}_\n"
+                f"   ðŸ“… {fb.get('date','?')}\n\n"
             )
 
     if approved:
-        lines.append("✅ *APPROVED:*\n")
+        lines.append("âœ… *APPROVED:*\n")
         for fb in approved:
-            stars = "⭐" * fb.get("rating", 0)
-            lines.append(f"— *{fb.get('name','?')}* {stars}: _{fb.get('comment','')}_\n")
+            stars = "â­" * fb.get("rating", 0)
+            lines.append(f"â€” *{fb.get('name','?')}* {stars}: _{fb.get('comment','')}_\n")
 
-    await update.message.reply_text("".join(lines), parse_mode="Markdown")
+    if rejected:
+        lines.append("âŒ *REJECTED:*\n")
+        for fb in rejected:
+            stars = "â­" * fb.get("rating", 0)
+            lines.append(f"â€” *{fb.get('name','?')}* {stars}: _{fb.get('comment','')}_\n")
+
+    full_text = "".join(lines)
+    # Split if too long
+    if len(full_text) > 4000:
+        full_text = full_text[:4000] + "\n\n_...more feedback available, use /reviewfeedback_"
+    await update.message.reply_text(full_text, parse_mode="Markdown")
+
+# Alias
+async def cmd_realfeedbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await cmd_realfeedback(update, context)
 
 # ============================================================
 # /help helper
@@ -2448,13 +2474,13 @@ async def cmd_realfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def _send_help(chat_id, context):
     await context.bot.send_message(chat_id=chat_id, parse_mode="Markdown", text=(
         "\U0001f4d6 *EVALON VIP SIGNALS \u2014 ADMIN GUIDE*\n\n"
-        "━━━━━━━━━━━━━━\n\U0001f4e1 *SIGNALS*\n━━━━━━━━━━━━━━\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f4e1 *SIGNALS*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
         "`EURUSD 5` \u2192 1 trade (default)\n"
         "`EURUSD 5 10` \u2192 10 trades auto\n\n"
         "PREPARING \u2192 BUY / SELL / Cancel\n"
         "If trades=1 \u2192 bot asks count\n"
         "If trades>1 \u2192 result sent auto\n\n"
-        "━━━━━━━━━━━━━━\n\U0001f4c5 *SESSION*\n━━━━━━━━━━━━━━\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f4c5 *SESSION*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
         "`/session` \u2014 Send 30min or 1hr alert\n"
         "\u25b6\ufe0f Send Start Now \u2014 button after /session\n"
         "\u26a0\ufe0f Emergency / Delay \u2014 urgent VIP message\n"
@@ -2464,7 +2490,7 @@ async def _send_help(chat_id, context):
         "\U0001f4e2 *Send Replay to Non-VIP* \u2014 attract non-VIP\n"
         "\U0001f4e2 *Send Results to Non-VIP* \u2014 summary only\n"
         "\U0001f4e2 *Forward Stats to Channel* \u2014 post to channel\n\n"
-        "━━━━━━━━━━━━━━\n\U0001f4e2 *BROADCAST*\n━━━━━━━━━━━━━━\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f4e2 *BROADCAST*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
         "Send photo \u2192 VIP only (with watermark)\n"
         "Send video \u2192 VIP + Non-VIP\n"
         "Send sticker \u2192 VIP only\n"
@@ -2474,7 +2500,7 @@ async def _send_help(chat_id, context):
         "Reply to media + `/broadcast all` \u2192 Everyone\n"
     ))
     await context.bot.send_message(chat_id=chat_id, parse_mode="Markdown", text=(
-        "━━━━━━━━━━━━━━\n\U0001f511 *VIP CODES*\n━━━━━━━━━━━━━━\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f511 *VIP CODES*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
         "`/addcode 1w Name` \u2014 1 Week code\n"
         "`/addcode 1m Name` \u2014 1 Month code\n"
         "`/addcode 3m Name` \u2014 3 Months code\n"
@@ -2484,14 +2510,15 @@ async def _send_help(chat_id, context):
         "`/listcodes` \u2014 View all codes\n"
         "`/vipusers` \u2014 View VIP members\n"
         "`/revoke USER\\_ID` \u2014 Remove VIP access\n\n"
-        "━━━━━━━━━━━━━━\n\U0001f4ca *STATS & FEEDBACK*\n━━━━━━━━━━━━━━\n"
-        "`/feedback` \u2014 Show fake+real feedback in bot\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f4ca *STATS & FEEDBACK*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+        "`/feedback` \u2014 Show fake+real feedback in bot (real after 2-3 fake)\n"
         "`/channelfeedback` \u2014 Select & forward to channel\n"
         "`/reviewfeedback` \u2014 Approve/reject member feedback\n"
-        "`/realfeedback` \u2014 View real feedback status\n"
+        "`/realfeedback` or `/realfeedbacks` \u2014 View all real feedback (no notifications sent)\n"
         "`/stats` \u2014 Full statistics\n"
         "`/dbstatus` \u2014 Database health\n\n"
-        "━━━━━━━━━━━━━━\n\U0001f5bc *MEDIA & FILE IDs*\n━━━━━━━━━━━━━━\n"
+        "ðŸ’¡ _Member feedback is saved silently â€” no admin pings. Check /realfeedbacks anytime._\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f5bc *MEDIA & FILE IDs*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
         "`/getid` \u2192 send sticker/photo \u2192 get file\\_id\n"
         "`/setwelcome` \u2192 send photo \u2192 set welcome image\n"
     ))
@@ -2506,7 +2533,7 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_setwelcome(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     context.user_data["awaiting_welcome_image"] = True
-    await update.message.reply_text("🖼️ *Send the welcome image now.*", parse_mode="Markdown")
+    await update.message.reply_text("ðŸ–¼ï¸ *Send the welcome image now.*", parse_mode="Markdown")
 
 async def cmd_dbstatus(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
@@ -2515,13 +2542,13 @@ async def cmd_dbstatus(update: Update, context: ContextTypes.DEFAULT_TYPE):
             _sb_get("main_db"); db = load_db()
             vips = sum(1 for u in db["users"].values() if u.get("vip"))
             await update.message.reply_text(
-                f"✅ *PostgreSQL Connected!*\n\n"
-                f"👥 Users: *{len(db['users'])}* | 💎 VIP: *{vips}* | 🔑 Codes: *{len(db.get('codes',{}))}*\n\n"
-                "Data is safely stored 🛡️", parse_mode="Markdown")
+                f"âœ… *PostgreSQL Connected!*\n\n"
+                f"ðŸ‘¥ Users: *{len(db['users'])}* | ðŸ’Ž VIP: *{vips}* | ðŸ”‘ Codes: *{len(db.get('codes',{}))}*\n\n"
+                "Data is safely stored ðŸ›¡ï¸", parse_mode="Markdown")
         except Exception as e:
-            await update.message.reply_text(f"❌ *PostgreSQL Error!*\n\n`{e}`", parse_mode="Markdown")
+            await update.message.reply_text(f"âŒ *PostgreSQL Error!*\n\n`{e}`", parse_mode="Markdown")
     else:
-        await update.message.reply_text("⚠️ *PostgreSQL not connected!*\n\nSet `DATABASE_URL` on Render.", parse_mode="Markdown")
+        await update.message.reply_text("âš ï¸ *PostgreSQL not connected!*\n\nSet `DATABASE_URL` on Render.", parse_mode="Markdown")
 
 async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
@@ -2542,27 +2569,27 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sacc  = f"{(sw/stot*100):.1f}%" if stot > 0 else "N/A"
 
     lines = [
-        "📊 *EVALON VIP SIGNALS — STATS*\n",
-        f"\n💾 Storage: *{'✅ PostgreSQL' if DATABASE_URL else '⚠️ Local JSON'}*\n",
-        "\n━━━━━━━━━━━━━━",
-        f"\n📣 Display count : *{BASE_MEMBERS + vip}*",
-        f"\n💎 VIP members   : *{vip}*",
-        f"\n🔓 Non-VIP       : *{len(users) - vip}*\n",
-        "━━━━━━━━━━━━━━",
-        f"\n🟢 Active codes : *{sum(1 for c in codes.values() if c.get('used'))}*",
-        f"\n⚪ Unused codes : *{sum(1 for c in codes.values() if not c.get('used'))}*",
-        f"\n📋 Total codes  : *{len(codes)}*\n",
-        "━━━━━━━━━━━━━━",
-        f"\n📅 *WEEKLY STATS* ({week})",
-        f"\n✅ Wins     : *{ww}*",
-        f"\n❌ Losses   : *{wl}*",
-        f"\n📈 Accuracy : *{wacc}*",
-        f"\n🏁 Sessions : *{wsess}*\n",
-        "━━━━━━━━━━━━━━",
-        f"\n⚡ *CURRENT SESSION*",
-        f"\n✅ Wins     : *{sw}*",
-        f"\n❌ Losses   : *{sl}*",
-        f"\n📈 Accuracy : *{sacc}*",
+        "ðŸ“Š *EVALON VIP SIGNALS â€” STATS*\n",
+        f"\nðŸ’¾ Storage: *{'âœ… PostgreSQL' if DATABASE_URL else 'âš ï¸ Local JSON'}*\n",
+        "\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”",
+        f"\nðŸ“£ Display count : *{BASE_MEMBERS + vip}*",
+        f"\nðŸ’Ž VIP members   : *{vip}*",
+        f"\nðŸ”“ Non-VIP       : *{len(users) - vip}*\n",
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”",
+        f"\nðŸŸ¢ Active codes : *{sum(1 for c in codes.values() if c.get('used'))}*",
+        f"\nâšª Unused codes : *{sum(1 for c in codes.values() if not c.get('used'))}*",
+        f"\nðŸ“‹ Total codes  : *{len(codes)}*\n",
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”",
+        f"\nðŸ“… *WEEKLY STATS* ({week})",
+        f"\nâœ… Wins     : *{ww}*",
+        f"\nâŒ Losses   : *{wl}*",
+        f"\nðŸ“ˆ Accuracy : *{wacc}*",
+        f"\nðŸ Sessions : *{wsess}*\n",
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”",
+        f"\nâš¡ *CURRENT SESSION*",
+        f"\nâœ… Wins     : *{sw}*",
+        f"\nâŒ Losses   : *{sl}*",
+        f"\nðŸ“ˆ Accuracy : *{sacc}*",
     ]
     await update.message.reply_text("".join(lines), parse_mode="Markdown")
 
@@ -2580,11 +2607,11 @@ async def cmd_addcode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     code, days = new_code(label, dur)
     dur_labels = {"1w": "1 Week", "1m": "1 Month", "3m": "3 Months", "6m": "6 Months", "1y": "1 Year"}
     await update.message.reply_text(
-        f"✅ *VIP Code Created!*\n\n"
-        f"👤 *{label}*\n"
-        f"🔑 `{code}`\n"
-        f"⏳ Duration: *{dur_labels[dur]}* ({days} days)\n\n"
-        f"📌 Usage: `/addcode 1w`, `/addcode 1m`, `/addcode 3m`, `/addcode 1y`",
+        f"âœ… *VIP Code Created!*\n\n"
+        f"ðŸ‘¤ *{label}*\n"
+        f"ðŸ”‘ `{code}`\n"
+        f"â³ Duration: *{dur_labels[dur]}* ({days} days)\n\n"
+        f"ðŸ“Œ Usage: `/addcode 1w`, `/addcode 1m`, `/addcode 3m`, `/addcode 1y`",
         parse_mode="Markdown"
     )
 
@@ -2600,48 +2627,48 @@ async def cmd_addcodes(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except: pass
     dur_labels = {"1w": "1 Week", "1m": "1 Month", "3m": "3 Months", "6m": "6 Months", "1y": "1 Year"}
     pairs = [new_code(f"VIP User {i+1}", dur) for i in range(count)]
-    codes_list = "\n".join(f"`{c}` — {dur_labels[dur]}" for c, _ in pairs)
+    codes_list = "\n".join(f"`{c}` â€” {dur_labels[dur]}" for c, _ in pairs)
     await update.message.reply_text(
-        f"✅ *{count} VIP Codes Created!*\n"
-        f"⏳ Duration: *{dur_labels[dur]}*\n\n{codes_list}",
+        f"âœ… *{count} VIP Codes Created!*\n"
+        f"â³ Duration: *{dur_labels[dur]}*\n\n{codes_list}",
         parse_mode="Markdown"
     )
 
 async def cmd_listcodes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     db = load_db(); codes = db.get("codes",{})
-    if not codes: await update.message.reply_text("📋 No codes yet."); return
+    if not codes: await update.message.reply_text("ðŸ“‹ No codes yet."); return
     unused = [(c,v) for c,v in codes.items() if not v.get("used")]
     used   = [(c,v) for c,v in codes.items() if v.get("used")]
-    lines  = [f"📋 *VIP CODES ({len(codes)} total)*\n⚪ Unused: {len(unused)}  🟢 Used: {len(used)}\n"]
-    if unused: lines.append("*— UNUSED —*"); [lines.append(f"`{c}` — {v.get('label','?')}") for c,v in unused[:20]]
-    if used:   lines.append("\n*— USED —*");  [lines.append(f"`{c}` — {v.get('used_name','?')} ({v.get('used_date','?')})") for c,v in used[:20]]
+    lines  = [f"ðŸ“‹ *VIP CODES ({len(codes)} total)*\nâšª Unused: {len(unused)}  ðŸŸ¢ Used: {len(used)}\n"]
+    if unused: lines.append("*â€” UNUSED â€”*"); [lines.append(f"`{c}` â€” {v.get('label','?')}") for c,v in unused[:20]]
+    if used:   lines.append("\n*â€” USED â€”*");  [lines.append(f"`{c}` â€” {v.get('used_name','?')} ({v.get('used_date','?')})") for c,v in used[:20]]
     await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
 async def cmd_vipusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     vids = get_vip_ids()
-    if not vids: await update.message.reply_text("👥 No VIP members yet."); return
-    db = load_db(); lines = [f"👥 *VIP MEMBERS ({get_display_count()} total):*\n"]
+    if not vids: await update.message.reply_text("ðŸ‘¥ No VIP members yet."); return
+    db = load_db(); lines = [f"ðŸ‘¥ *VIP MEMBERS ({get_display_count()} total):*\n"]
     for vid in vids:
         info = db["users"].get(str(vid), {})
-        lines.append(f"👤 *{info.get('name','?')}*  |  🔑 `{info.get('vip_code','?')}`  |  📅 {info.get('joined_date','?')}")
+        lines.append(f"ðŸ‘¤ *{info.get('name','?')}*  |  ðŸ”‘ `{info.get('vip_code','?')}`  |  ðŸ“… {info.get('joined_date','?')}")
     await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
 async def cmd_revoke(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     if not context.args: await update.message.reply_text("Usage: `/revoke USER_ID`", parse_mode="Markdown"); return
     try: target = int(context.args[0])
-    except: await update.message.reply_text("❌ Invalid user ID."); return
+    except: await update.message.reply_text("âŒ Invalid user ID."); return
     db = load_db(); key = str(target)
-    if key not in db["users"]: await update.message.reply_text("❌ User not found."); return
+    if key not in db["users"]: await update.message.reply_text("âŒ User not found."); return
     name = db["users"][key].get("name","Unknown"); code = db["users"][key].get("vip_code")
     db["users"][key].update({"vip": False, "vip_code": None})
-    # Delete code permanently — cannot be reused by anyone
+    # Delete code permanently â€” cannot be reused by anyone
     if code and code in db["codes"]:
         del db["codes"][code]
     save_db(db)
-    await update.message.reply_text(f"⛔ *VIP Revoked!*\n\n👤 *{name}*\n🔑 Code `{code}` has been permanently deleted.", parse_mode="Markdown")
+    await update.message.reply_text(f"â›” *VIP Revoked!*\n\nðŸ‘¤ *{name}*\nðŸ”‘ Code `{code}` has been permanently deleted.", parse_mode="Markdown")
 
 async def protect_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Block all forwarded messages from non-admins."""
@@ -2649,7 +2676,7 @@ async def protect_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try: await update.message.delete()
     except: pass
     await update.message.reply_text(
-        "🔒 *Forwarding is not allowed in this bot.*\n\nAll content is protected.",
+        "ðŸ”’ *Forwarding is not allowed in this bot.*\n\nAll content is protected.",
         parse_mode="Markdown"
     )
 
@@ -2658,7 +2685,7 @@ async def protect_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # VIP EXPIRY CHECKER
 # ============================================================
 def start_expiry_checker():
-    """Background thread — checks VIP expiry once per day at 08:00 UTC."""
+    """Background thread â€” checks VIP expiry once per day at 08:00 UTC."""
     import asyncio as _asyncio
 
     def _loop():
@@ -2680,10 +2707,10 @@ def start_expiry_checker():
 
     t = threading.Thread(target=_loop, daemon=True)
     t.start()
-    logger.info("VIP expiry checker started ✅")
+    logger.info("VIP expiry checker started âœ…")
 
 async def _run_expiry_check():
-    """Called by background thread — needs bot instance."""
+    """Called by background thread â€” needs bot instance."""
     from telegram import Bot
     bot = Bot(token=BOT_TOKEN)
     async with bot:
@@ -2714,34 +2741,61 @@ async def _do_expiry_check(bot):
                 await bot.send_message(
                     chat_id=uid,
                     text=(
-                        f"⚠️ *Dear {name},*\n\n"
+                        f"âš ï¸ *Dear {name},*\n\n"
                         f"Your *VIP access has expired* today ({expiry_str}).\n"
                         f"You no longer have access to signals.\n\n"
-                        f"💎 Contact admin to renew your VIP access.\n\n"
+                        f"ðŸ’Ž Contact admin to renew your VIP access.\n\n"
                         f"{KAULI_MBIU}"
                     ),
                     parse_mode="Markdown",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("💬 Contact Admin", url=SUPPORT_URL)
+                        InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
                     ]])
                 )
             except: pass
 
         elif days_left == 3:
+            # Check if this is a Free Trial (Wiki 1 / 1w) license
+            code = udata.get("vip_code")
+            db_codes = db.get("codes", {})
+            is_free_trial = (
+                code and code in db_codes and
+                db_codes[code].get("duration_key") == "1w"
+            )
             try:
-                await bot.send_message(
-                    chat_id=uid,
-                    text=(
-                        f"⏰ *Dear {name},*\n\n"
-                        f"Your VIP access *expires in 3 days* — on *{expiry_str}*.\n\n"
-                        f"Contact admin now to renew and keep receiving signals without interruption.\n\n"
-                        f"{KAULI_MBIU}"
-                    ),
-                    parse_mode="Markdown",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("💬 Contact Admin", url=SUPPORT_URL)
-                    ]])
-                )
+                if is_free_trial:
+                    await bot.send_message(
+                        chat_id=uid,
+                        text=(
+                            f"â° *Dear {name},*\n\n"
+                            f"Your *Free Trial* will end in *3 days* ({expiry_str}).\n\n"
+                            f"To continue receiving VIP signals, you have two options:\n\n"
+                            f"âœ… Subscribe to *Evalon Trader VIP* and continue enjoying all premium signals, updates, and VIP benefits without interruption.\n\n"
+                            f"âœ… Or continue using *Free Trial* rewards by inviting your friends.\n\n"
+                            f"ðŸ“Œ Invite at least *5 people* to qualify for additional Free Trial days.\n\n"
+                            f"The more people you invite, the more free access and VIP signals you can continue to enjoy.\n\n"
+                            f"If you do not wish to invite others, you can subscribe to VIP and continue receiving signals without any limitations.\n\n"
+                            f"ðŸ‘‘ *ALWAYS EVALON TRADER IS THE KING OF FINANCE* ðŸ‘‘"
+                        ),
+                        parse_mode="Markdown",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
+                        ]])
+                    )
+                else:
+                    await bot.send_message(
+                        chat_id=uid,
+                        text=(
+                            f"â° *Dear {name},*\n\n"
+                            f"Your VIP access *expires in 3 days* â€” on *{expiry_str}*.\n\n"
+                            f"Contact admin now to renew and keep receiving signals without interruption.\n\n"
+                            f"{KAULI_MBIU}"
+                        ),
+                        parse_mode="Markdown",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
+                        ]])
+                    )
             except: pass
 
         elif days_left == 1:
@@ -2749,20 +2803,20 @@ async def _do_expiry_check(bot):
                 await bot.send_message(
                     chat_id=uid,
                     text=(
-                        f"🚨 *Last Warning, {name}!*\n\n"
-                        f"Your VIP access *expires TOMORROW* — *{expiry_str}*.\n\n"
+                        f"ðŸš¨ *Last Warning, {name}!*\n\n"
+                        f"Your VIP access *expires TOMORROW* â€” *{expiry_str}*.\n\n"
                         f"Renew *today* to avoid losing access to signals!\n\n"
                         f"{KAULI_MBIU}"
                     ),
                     parse_mode="Markdown",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("💬 Contact Admin", url=SUPPORT_URL)
+                        InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
                     ]])
                 )
             except: pass
 
 async def check_vip_expiry(context):
-    """Runs daily — warns users 3 days before expiry, revokes on expiry."""
+    """Runs daily â€” warns users 3 days before expiry, revokes on expiry."""
     db    = load_db()
     today = datetime.now().date()
     bot   = context.bot
@@ -2790,34 +2844,61 @@ async def check_vip_expiry(context):
                 await bot.send_message(
                     chat_id=uid,
                     text=(
-                        f"⚠️ *Dear {name},*\n\n"
+                        f"âš ï¸ *Dear {name},*\n\n"
                         f"Your *VIP access has expired* today ({expiry_str}).\n"
                         f"You no longer have access to signals.\n\n"
-                        f"💎 Contact admin to renew your VIP access.\n\n"
+                        f"ðŸ’Ž Contact admin to renew your VIP access.\n\n"
                         f"{KAULI_MBIU}"
                     ),
                     parse_mode="Markdown",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("💬 Contact Admin", url=SUPPORT_URL)
+                        InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
                     ]])
                 )
             except: pass
 
         elif days_left == 3:
+            # Check if this is a Free Trial (Wiki 1 / 1w) license
+            code = udata.get("vip_code")
+            db_codes = db.get("codes", {})
+            is_free_trial = (
+                code and code in db_codes and
+                db_codes[code].get("duration_key") == "1w"
+            )
             try:
-                await bot.send_message(
-                    chat_id=uid,
-                    text=(
-                        f"⏰ *Dear {name},*\n\n"
-                        f"Your VIP access *expires in 3 days* — on *{expiry_str}*.\n\n"
-                        f"Contact admin now to renew and keep receiving signals without interruption.\n\n"
-                        f"{KAULI_MBIU}"
-                    ),
-                    parse_mode="Markdown",
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("💬 Contact Admin", url=SUPPORT_URL)
-                    ]])
-                )
+                if is_free_trial:
+                    await bot.send_message(
+                        chat_id=uid,
+                        text=(
+                            f"â° *Dear {name},*\n\n"
+                            f"Your *Free Trial* will end in *3 days* ({expiry_str}).\n\n"
+                            f"To continue receiving VIP signals, you have two options:\n\n"
+                            f"âœ… Subscribe to *Evalon Trader VIP* and continue enjoying all premium signals, updates, and VIP benefits without interruption.\n\n"
+                            f"âœ… Or continue using *Free Trial* rewards by inviting your friends.\n\n"
+                            f"ðŸ“Œ Invite at least *5 people* to qualify for additional Free Trial days.\n\n"
+                            f"The more people you invite, the more free access and VIP signals you can continue to enjoy.\n\n"
+                            f"If you do not wish to invite others, you can subscribe to VIP and continue receiving signals without any limitations.\n\n"
+                            f"ðŸ‘‘ *ALWAYS EVALON TRADER IS THE KING OF FINANCE* ðŸ‘‘"
+                        ),
+                        parse_mode="Markdown",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
+                        ]])
+                    )
+                else:
+                    await bot.send_message(
+                        chat_id=uid,
+                        text=(
+                            f"â° *Dear {name},*\n\n"
+                            f"Your VIP access *expires in 3 days* â€” on *{expiry_str}*.\n\n"
+                            f"Contact admin now to renew and keep receiving signals without interruption.\n\n"
+                            f"{KAULI_MBIU}"
+                        ),
+                        parse_mode="Markdown",
+                        reply_markup=InlineKeyboardMarkup([[
+                            InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
+                        ]])
+                    )
             except: pass
 
         elif days_left == 1:
@@ -2825,14 +2906,14 @@ async def check_vip_expiry(context):
                 await bot.send_message(
                     chat_id=uid,
                     text=(
-                        f"🚨 *Last Warning, {name}!*\n\n"
-                        f"Your VIP access *expires TOMORROW* — *{expiry_str}*.\n\n"
+                        f"ðŸš¨ *Last Warning, {name}!*\n\n"
+                        f"Your VIP access *expires TOMORROW* â€” *{expiry_str}*.\n\n"
                         f"Renew *today* to avoid losing access to signals!\n\n"
                         f"{KAULI_MBIU}"
                     ),
                     parse_mode="Markdown",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("💬 Contact Admin", url=SUPPORT_URL)
+                        InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
                     ]])
                 )
             except: pass
@@ -2848,7 +2929,7 @@ def main():
     print("="*55)
     print("  EVALON VIP SIGNALS BOT v9")
     print("="*55)
-    print(f"Storage  : {'PostgreSQL ✅' if DATABASE_URL else 'Local JSON ⚠️'}")
+    print(f"Storage  : {'PostgreSQL âœ…' if DATABASE_URL else 'Local JSON âš ï¸'}")
     db = load_db()
     print(f"VIP      : {sum(1 for u in db['users'].values() if u.get('vip'))}")
     print(f"Codes    : {len(db.get('codes', {}))}")
@@ -2865,6 +2946,7 @@ def main():
     app.add_handler(CommandHandler("feedback",        feedback_cmd))
     app.add_handler(CommandHandler("channelfeedback", cmd_channelfeedback))
     app.add_handler(CommandHandler("realfeedback",    cmd_realfeedback))
+    app.add_handler(CommandHandler("realfeedbacks",   cmd_realfeedbacks))
     app.add_handler(CommandHandler("reviewfeedback",  cmd_reviewfeedback))
     app.add_handler(CommandHandler("setwelcome",   cmd_setwelcome))
     app.add_handler(CommandHandler("addcode",      cmd_addcode))
