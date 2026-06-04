@@ -1516,7 +1516,8 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ]])
             )
         except: pass
-        await q.answer(f"{'Selected \u2705' if label == '\u2705 Selected' else 'Deselected \u2610'}")
+        answer_text = "Selected \u2705" if label == "\u2705 Selected" else "Deselected \u2610"
+        await q.answer(answer_text)
         return
 
     # /channelfeedback \u2014 forward selected entries to channel
@@ -2751,9 +2752,10 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     stot  = sw + sl
     sacc  = f"{(sw/stot*100):.1f}%" if stot > 0 else "N/A"
 
+    storage_str = "\u2705 PostgreSQL" if DATABASE_URL else "\u26a0\ufe0f Local JSON"
     lines = [
         "\U0001f4ca *EVALON VIP SIGNALS \u2014 STATS*\n",
-        f"\n\U0001f4be Storage: *{'\u2705 PostgreSQL' if DATABASE_URL else '\u26a0\ufe0f Local JSON'}*\n",
+        f"\n\U0001f4be Storage: *{storage_str}*\n",
         "\n--------------",
         f"\n\U0001f4e3 Display count : *{get_base_members() + vip}*",
         f"\n\U0001f48e VIP members   : *{vip}*",
@@ -3163,7 +3165,8 @@ def main():
     print("="*55)
     print("  EVALON VIP SIGNALS BOT v9")
     print("="*55)
-    print(f"Storage  : {'PostgreSQL \u2705' if DATABASE_URL else 'Local JSON \u26a0\ufe0f'}")
+    storage_label = "PostgreSQL \u2705" if DATABASE_URL else "Local JSON \u26a0\ufe0f"
+    print(f"Storage  : {storage_label}")
     db = load_db()
     print(f"VIP      : {sum(1 for u in db['users'].values() if u.get('vip'))}")
     print(f"Codes    : {len(db.get('codes', {}))}")
