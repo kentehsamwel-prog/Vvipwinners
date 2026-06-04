@@ -7,7 +7,7 @@ v8: Per-user watermark with ID, watermark text @EvalonwinnersBot, weekly stats i
 v9: Bilingual expiry notifications (SW+EN) with name, feedback approval system with channel forward
 """
 
-import os, json, uuid, time, logging, asyncio, threading, urllib.request, urllib.request
+import os, json, uuid, time, logging, asyncio, threading, urllib.request, urllib.request, subprocess, tempfile
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, timezone, timedelta
@@ -199,6 +199,62 @@ def add_watermark(image_bytes: bytes, user_id: int = None) -> bytes:
         return image_bytes
 
 # ============================================================
+# VIDEO WATERMARK (ffmpeg)
+# ============================================================
+async def add_video_watermark(video_bytes: bytes, user_id=None) -> bytes:
+    """Burn text watermark onto video using ffmpeg. Returns original bytes if ffmpeg fails."""
+    try:
+        wm_line1 = "@EVALONWINNERSBOT"
+        wm_line2 = f"ID: {user_id}" if user_id else ""
+        wm_text  = f"{wm_line1}\\n{wm_line2}" if wm_line2 else wm_line1
+
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as fin:
+            fin.write(video_bytes)
+            in_path = fin.name
+        out_path = in_path.replace(".mp4", "_wm.mp4")
+
+        # ffmpeg drawtext filter - tiled diagonal watermark
+        drawtext = (
+            f"drawtext=text='{wm_text}':"
+            f"fontsize=24:fontcolor=white@0.55:shadowcolor=black@0.55:shadowx=2:shadowy=2:"
+            f"x='mod(n*3\\,w)':y='mod(n*2\\,h)':enable=1,"
+            f"drawtext=text='{wm_text}':"
+            f"fontsize=24:fontcolor=white@0.55:shadowcolor=black@0.55:shadowx=2:shadowy=2:"
+            f"x='mod(n*3+w/2\\,w)':y='mod(n*2+h/2\\,h)':enable=1"
+        )
+
+        cmd = [
+            "ffmpeg", "-y", "-i", in_path,
+            "-vf", drawtext,
+            "-codec:a", "copy",
+            "-preset", "ultrafast",
+            out_path
+        ]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL
+        )
+        await proc.wait()
+
+        if proc.returncode == 0 and os.path.exists(out_path):
+            with open(out_path, "rb") as f:
+                result = f.read()
+        else:
+            logger.warning("ffmpeg video watermark failed, sending original")
+            result = video_bytes
+
+        # Cleanup
+        for p in [in_path, out_path]:
+            try: os.unlink(p)
+            except: pass
+
+        return result
+    except Exception as e:
+        logger.warning(f"Video watermark error: {e}")
+        return video_bytes
+
+# ============================================================
 # CONFIG
 # ============================================================
 BOT_TOKEN      = os.environ.get("BOT_TOKEN")
@@ -312,7 +368,13 @@ SESSION_STATS    = {"wins": 0, "losses": 0, "start_time": None}
 SESSION_LOG      = []   # list of dicts: {pair, expiry, direction, result, count}
 FULL_SESSION_LOG = []   # full ordered log: every message/sticker sent during session
                         # entry: {"type": "text"|"sticker", "content": str}
-BASE_MEMBERS  = 1500
+_BASE_MEMBERS_START = 1500
+_BASE_MEMBERS_DATE  = datetime(2026, 6, 4, tzinfo=timezone.utc)  # Start date: 1500 members
+
+def get_base_members():
+    """Returns 1500 + days elapsed since June 4 2026 (grows +1 per day)."""
+    days = (datetime.now(timezone.utc) - _BASE_MEMBERS_DATE).days
+    return _BASE_MEMBERS_START + max(0, days)
 
 # Weekly stats â€” stored in DB so they survive restarts
 def _get_weekly_key():
@@ -418,13 +480,27 @@ def get_all_ids():   return [int(k) for k in load_db()["users"]]
 def get_novip_ids(): return [int(k) for k,v in load_db()["users"].items() if not v.get("vip")]
 def get_vip_count(): return sum(1 for v in load_db()["users"].values() if v.get("vip"))
 
-# FIX 3: display count = 1500 + real VIP count
+# Display count = base (grows +1/day from 1500) + real VIP count
 def get_display_count():
-    return BASE_MEMBERS + get_vip_count()
+    return get_base_members() + get_vip_count()
+
+def has_used_trial(uid):
+    """Returns True if this user_id has ever used a 1w (Free Trial) code."""
+    db = load_db()
+    return str(uid) in db.get("trial_users", {})
 
 def activate_code(code, uid, name):
     db = load_db(); code = code.strip().upper()
     if code not in db["codes"] or db["codes"][code].get("used"): return False
+
+    # Check if this is a Free Trial code
+    duration_key = db["codes"][code].get("duration_key", "1m")
+    is_trial = (duration_key == "1w")
+
+    # Block if user already used a trial before
+    if is_trial and has_used_trial(uid):
+        return "trial_abuse"
+
     days = db["codes"][code].get("duration_days", 30)
     now  = datetime.now()
     exp  = now + timedelta(days=days)
@@ -445,6 +521,16 @@ def activate_code(code, uid, name):
         "vip_expiry": exp_str,
         "joined_date": now.strftime("%Y-%m-%d"),
     })
+
+    # Record trial usage permanently (survives revoke/expiry)
+    if is_trial:
+        if "trial_users" not in db: db["trial_users"] = {}
+        db["trial_users"][str(uid)] = {
+            "name":      name,
+            "code":      code,
+            "date":      now.strftime("%Y-%m-%d %H:%M"),
+        }
+
     save_db(db); return True
 
 # Duration options in days
@@ -456,18 +542,23 @@ VIP_DURATIONS = {
     "1y":  365,
 }
 
-def new_code(label, duration_key="1m"):
+def new_code(label, duration_key="1m", custom_days=None):
     code = "VIP-" + "-".join(uuid.uuid4().hex[:4].upper() for _ in range(3))
     db   = load_db()
-    days = VIP_DURATIONS.get(duration_key, 30)
+    if custom_days:
+        days = custom_days
+        dur_key = f"{custom_days}d"
+    else:
+        days    = VIP_DURATIONS.get(duration_key, 30)
+        dur_key = duration_key
     db["codes"][code] = {
         "label":        label,
         "used":         False,
         "used_by":      None,
         "created":      datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "duration_key": duration_key,
+        "duration_key": dur_key,
         "duration_days": days,
-        "expires_date": None,   # set when code is activated
+        "expires_date": None,
     }
     save_db(db); return code, days
 
@@ -629,8 +720,7 @@ def msg_cancelled(pair):
 async def send_to_list(context, uid_list, text=None, photo=None,
                        video=None, sticker=None, caption=None,
                        animation=None, reply_markup=None, parse_mode="Markdown"):
-    sent = failed = 0
-    for uid in uid_list:
+    async def _send_one(uid):
         try:
             if photo:
                 await context.bot.send_photo(chat_id=uid, photo=photo, caption=caption,
@@ -646,9 +736,13 @@ async def send_to_list(context, uid_list, text=None, photo=None,
             elif text:
                 await context.bot.send_message(chat_id=uid, text=text,
                     parse_mode=parse_mode, reply_markup=reply_markup, protect_content=True)
-            sent += 1
+            return True
         except Exception as e:
-            logger.warning(f"Send failed {uid}: {e}"); failed += 1
+            logger.warning(f"Send failed {uid}: {e}"); return False
+
+    results = await asyncio.gather(*[_send_one(uid) for uid in uid_list])
+    sent   = sum(1 for r in results if r)
+    failed = sum(1 for r in results if not r)
     return sent, failed
 
 # ============================================================
@@ -863,7 +957,7 @@ async def _process_result(update, context, result, sig_id, count, query=None):
     if USE_STICKERS and sticker_id and "PASTE_" not in sticker_id:
         FULL_SESSION_LOG.append({"type": "sticker", "content": sticker_id})
 
-    for uid_str in msgs:
+    async def _send_result_one(uid_str):
         uidint = int(uid_str)
         try:
             await context.bot.send_message(chat_id=uidint, text=result_text,
@@ -873,6 +967,8 @@ async def _process_result(update, context, result, sig_id, count, query=None):
             try:
                 await context.bot.send_sticker(chat_id=uidint, sticker=sticker_id, protect_content=True)
             except Exception as e: logger.warning(f"Result sticker failed {uid_str}: {e}")
+
+    await asyncio.gather(*[_send_result_one(uid_str) for uid_str in msgs])
 
     if sig_id and sig_id in signals:
         del signals[sig_id]; save_signals(signals)
@@ -981,11 +1077,12 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Record session start in full log
         FULL_SESSION_LOG.append({"type": "sticker", "content": SESSION_START_STICKER})
         FULL_SESSION_LOG.append({"type": "text",    "content": start_text})
-        for vid in vip_ids:
+        async def _send_session_start(vid):
             try: await context.bot.send_sticker(chat_id=vid, sticker=SESSION_START_STICKER, protect_content=True)
             except: pass
             try: await context.bot.send_message(chat_id=vid, text=start_text, parse_mode="Markdown", protect_content=True)
             except: pass
+        await asyncio.gather(*[_send_session_start(vid) for vid in vip_ids])
         await q.edit_message_text(
             "\U0001f7e2 *Session started!*\n\nSend your first signal now!",
             parse_mode="Markdown",
@@ -1014,12 +1111,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         FULL_SESSION_LOG.append({"type": "text",    "content": text})
         fb_text    = "\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f4dd *Rate today's session:*\nTap a number (1 = poor, 5 = excellent)"
         fb_kb      = kb_feedback(session_id)
-        for vid in vip_ids:
+        async def _send_session_end(vid):
             try: await context.bot.send_sticker(chat_id=vid, sticker=SESSION_CLOSE_STICKER, protect_content=True)
             except: pass
             try: await context.bot.send_message(chat_id=vid, text=text+fb_text,
                     parse_mode="Markdown", reply_markup=fb_kb, protect_content=True)
             except: pass
+        await asyncio.gather(*[_send_session_end(vid) for vid in vip_ids])
         sigs = load_signals(); sigs[f"session_{session_id}"] = {"session_id": session_id}; save_signals(sigs)
         wins_end = SESSION_STATS["wins"]; losses_end = SESSION_STATS["losses"]
         total_end = wins_end + losses_end
@@ -1253,12 +1351,14 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         trades = sig.get("trades", 1); msgs = sig["msgs"]
 
         if action == "CANCEL":
-            for uid_str, mid in msgs.items():
+            async def _send_cancel(item):
+                uid_str, mid = item
                 try: await context.bot.edit_message_text(chat_id=int(uid_str), message_id=mid,
                         text=msg_cancelled(pair), parse_mode="Markdown")
                 except: pass
+            await asyncio.gather(*[_send_cancel(item) for item in msgs.items()])
             del signals[sig_id]; save_signals(signals)
-            await q.edit_message_text(f"âŒ Signal *{pair}* cancelled.", parse_mode="Markdown")
+            await q.edit_message_text(f"\u274c Signal *{pair}* cancelled.", parse_mode="Markdown")
             return
 
         direction_text = msg_direction(pair, expiry, action, trades)
@@ -1267,13 +1367,16 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         FULL_SESSION_LOG.append({"type": "text",    "content": direction_text})
         if USE_STICKERS and sticker_id and "PASTE_" not in sticker_id:
             FULL_SESSION_LOG.append({"type": "sticker", "content": sticker_id})
-        for uid_str in msgs:
+
+        async def _send_direction(uid_str):
             uidint = int(uid_str)
             try: await context.bot.send_message(chat_id=uidint, text=direction_text, parse_mode="Markdown", protect_content=True)
             except Exception as e: logger.warning(f"Dir txt failed {uid_str}: {e}")
             if USE_STICKERS and sticker_id and "PASTE_" not in sticker_id:
                 try: await context.bot.send_sticker(chat_id=uidint, sticker=sticker_id, protect_content=True)
                 except Exception as e: logger.warning(f"Dir stk failed {uid_str}: {e}")
+
+        await asyncio.gather(*[_send_direction(uid_str) for uid_str in msgs])
         signals[sig_id]["direction"] = action; save_signals(signals)
 
         arrow   = "ðŸ“ˆ" if action == "BUY" else "ðŸ“‰"
@@ -1633,12 +1736,17 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except: pass
 
         sent_msgs = {}
-        for vid in vip_ids:
+        async def _send_preparing(vid):
             try:
                 m = await context.bot.send_message(chat_id=vid, text=msg_preparing(pair, expiry),
                     parse_mode="Markdown", protect_content=True)
-                sent_msgs[str(vid)] = m.message_id
-            except Exception as e: logger.warning(f"Send failed {vid}: {e}")
+                return str(vid), m.message_id
+            except Exception as e:
+                logger.warning(f"Send failed {vid}: {e}"); return None, None
+
+        results = await asyncio.gather(*[_send_preparing(vid) for vid in vip_ids])
+        for vid_str, mid in results:
+            if vid_str: sent_msgs[vid_str] = mid
 
         sig_id = f"{pair.replace('/','').replace(' ','')}_{expiry}_{int(time.time())}"
         signals = load_signals()
@@ -1705,22 +1813,32 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     code = text.upper()
     context.user_data["awaiting_code"] = False
-    if activate_code(code, uid, name):
-        mday = "ðŸŸ¢ Market open â€” signals active!" if is_market_day() else "ðŸ”´ Weekend â€” signals resume Monday."
+    result = activate_code(code, uid, name)
+    if result is True:
+        mday = "\U0001f7e2 Market open \u2014 signals active!" if is_market_day() else "\U0001f534 Weekend \u2014 signals resume Monday."
         await update.message.reply_text(
-            f"âœ… *VIP Access Activated! Welcome, {name}!* ðŸŽ‰\n\n"
-            "âš¡ *EVALON VIP SIGNALS*\n\nYou are now a *VIP Member* ðŸŽ¯\n\n"
-            "âœ… Real market signals â€” Mon to Fri\nâœ… Non-Martingale strategy\n"
-            f"âœ… Win/Loss updates\n\n{mday}\n\nStay active â€” signals arrive here ðŸ“©",
+            f"\u2705 *VIP Access Activated! Welcome, {name}!* \U0001f389\n\n"
+            "\u26a1 *EVALON VIP SIGNALS*\n\nYou are now a *VIP Member* \U0001f3af\n\n"
+            "\u2705 Real market signals \u2014 Mon to Fri\n\u2705 Non-Martingale strategy\n"
+            f"\u2705 Win/Loss updates\n\n{mday}\n\nStay active \u2014 signals arrive here \U0001f4e9",
+            parse_mode="Markdown", reply_markup=kb_support(), protect_content=True)
+    elif result == "trial_abuse":
+        await update.message.reply_text(
+            "\U0001f6ab *Free Trial Not Available*\n\n"
+            "It looks like you have already used a Free Trial on this account before.\n\n"
+            "Each user is eligible for *one Free Trial only*.\n\n"
+            "To continue receiving VIP signals, please contact admin to subscribe to a full VIP plan. "
+            "We have flexible options starting from 1 month.\n\n"
+            "\U0001f4aa *Thank you for being part of Evalon Trader \u2014 let\u2019s take it to the next level!*",
             parse_mode="Markdown", reply_markup=kb_support(), protect_content=True)
     else:
         db   = load_db(); cdat = db["codes"].get(code)
         if cdat and cdat.get("used"):
             await update.message.reply_text(
-                "âŒ *This code has already been used!*\n\nContact admin for your own code:",
+                "\u274c *This code has already been used!*\n\nContact admin for your own code:",
                 parse_mode="Markdown", reply_markup=kb_locked(), protect_content=True)
         else:
-            await update.message.reply_text("âŒ *Invalid VIP code!*\n\nContact admin:",
+            await update.message.reply_text("\u274c *Invalid VIP code!*\n\nContact admin:",
                 parse_mode="Markdown", reply_markup=kb_locked(), protect_content=True)
 
 # ============================================================
@@ -1765,44 +1883,100 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sent = 0
     if msg.photo:
         # Photo â†’ VIP only
-        if not vip_ids: await msg.reply_text("âš ï¸ No VIP members yet."); return
+        # Watermark ONCE (no user ID), reuse file_id for all members (fast)
+        if not vip_ids: await msg.reply_text("\u26a0\ufe0f No VIP members yet."); return
+        cached_file_id = None
         try:
-            file = await context.bot.get_file(msg.photo[-1].file_id)
+            file    = await context.bot.get_file(msg.photo[-1].file_id)
             raw_img = bytes(await file.download_as_bytearray())
+            wm      = add_watermark(raw_img, user_id=None)  # single watermark, no ID
+            bio     = __import__("io").BytesIO(wm); bio.name = "signal.jpg"
+            # Send to first member, get back file_id to reuse for rest
+            first_id = vip_ids[0]
+            sent_msg = await context.bot.send_photo(
+                chat_id=first_id, photo=bio,
+                caption=msg.caption, parse_mode="Markdown", protect_content=True)
+            cached_file_id = sent_msg.photo[-1].file_id
+            sent += 1
         except Exception as e:
-            logger.warning(f"Photo download failed: {e}")
-            raw_img = None
-        for vid in vip_ids:
+            logger.warning(f"Photo watermark/first send failed: {e}")
+
+        for vid in vip_ids[1:]:
             try:
-                if raw_img:
-                    wm  = add_watermark(raw_img, user_id=vid)
-                    bio = __import__("io").BytesIO(wm); bio.name = "signal.jpg"
-                    await context.bot.send_photo(chat_id=vid, photo=bio,
+                if cached_file_id:
+                    await context.bot.send_photo(
+                        chat_id=vid, photo=cached_file_id,
                         caption=msg.caption, parse_mode="Markdown", protect_content=True)
                 else:
-                    await context.bot.send_photo(chat_id=vid, photo=msg.photo[-1].file_id,
+                    await context.bot.send_photo(
+                        chat_id=vid, photo=msg.photo[-1].file_id,
                         caption=msg.caption, parse_mode="Markdown", protect_content=True)
                 sent += 1
             except Exception as e:
                 logger.warning(f"Photo send failed {vid}: {e}")
         if sent:
-            await msg.reply_text(f"âœ… Photo sent to *{sent}* VIP members!", parse_mode="Markdown")
+            await msg.reply_text(f"\u2705 Photo sent to *{sent}* VIP members!", parse_mode="Markdown")
     elif msg.video:
-        # Video â†’ VIP + Non-VIP (everyone)
-        wm_caption = f"{msg.caption}\n\nðŸ“¹ @EvalonwinnersBot" if msg.caption else "ðŸ“¹ @EvalonwinnersBot"
+        # Video â†’ VIP + Non-VIP + Channel (no protect_content, watermark per user)
         targets = list(set(vip_ids + novip_ids))
-        if not targets: await msg.reply_text("âš ï¸ No members yet."); return
+        if not targets: await msg.reply_text("\u26a0\ufe0f No members yet."); return
+
+        # Download video once
+        processing_msg = await msg.reply_text("\u23f3 Processing video watermark...")
+        try:
+            file = await context.bot.get_file(msg.video.file_id)
+            raw_video = bytes(await file.download_as_bytearray())
+        except Exception as e:
+            logger.warning(f"Video download failed: {e}")
+            raw_video = None
+
         sent_vip = sent_novip = 0
         for tid in targets:
             try:
-                await context.bot.send_video(chat_id=tid, video=msg.video.file_id,
-                    caption=wm_caption, parse_mode="Markdown", protect_content=True)
+                if raw_video:
+                    wm_video = await add_video_watermark(raw_video, user_id=tid)
+                    bio = __import__("io").BytesIO(wm_video); bio.name = "video.mp4"
+                    await context.bot.send_video(
+                        chat_id=tid, video=bio,
+                        caption=msg.caption, parse_mode="Markdown",
+                        protect_content=False
+                    )
+                else:
+                    await context.bot.send_video(
+                        chat_id=tid, video=msg.video.file_id,
+                        caption=msg.caption, parse_mode="Markdown",
+                        protect_content=False
+                    )
                 if tid in vip_ids: sent_vip += 1
                 else: sent_novip += 1
             except Exception as e:
                 logger.warning(f"Video send failed {tid}: {e}")
+
+        # Send to channel (no per-user watermark, use generic watermark)
+        sent_channel = False
+        try:
+            if raw_video:
+                ch_video = await add_video_watermark(raw_video)
+                bio_ch = __import__("io").BytesIO(ch_video); bio_ch.name = "video.mp4"
+                await context.bot.send_video(
+                    chat_id=CHANNEL_NUMERIC_ID, video=bio_ch,
+                    caption=msg.caption, parse_mode="Markdown"
+                )
+            else:
+                await context.bot.send_video(
+                    chat_id=CHANNEL_NUMERIC_ID, video=msg.video.file_id,
+                    caption=msg.caption, parse_mode="Markdown"
+                )
+            sent_channel = True
+        except Exception as e:
+            logger.warning(f"Video to channel failed: {e}")
+
+        try: await processing_msg.delete()
+        except: pass
+
+        ch_status = "\u2705 Channel" if sent_channel else "\u274c Channel failed"
         await msg.reply_text(
-            f"âœ… Video sent!\n\nðŸ’Ž VIP: *{sent_vip}* | ðŸ”“ Non-VIP: *{sent_novip}*",
+            f"\u2705 Video sent!\n\n\U0001f48e VIP: *{sent_vip}* | \U0001f513 Non-VIP: *{sent_novip}*\n{ch_status}",
             parse_mode="Markdown"
         )
     elif msg.animation:
@@ -2475,52 +2649,60 @@ async def _send_help(chat_id, context):
     await context.bot.send_message(chat_id=chat_id, parse_mode="Markdown", text=(
         "\U0001f4d6 *EVALON VIP SIGNALS \u2014 ADMIN GUIDE*\n\n"
         "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f4e1 *SIGNALS*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
-        "`EURUSD 5` \u2192 1 trade (default)\n"
-        "`EURUSD 5 10` \u2192 10 trades auto\n\n"
-        "PREPARING \u2192 BUY / SELL / Cancel\n"
-        "If trades=1 \u2192 bot asks count\n"
-        "If trades>1 \u2192 result sent auto\n\n"
+        "`EURUSD 5` \u2014 Send signal for 1 trade\n"
+        "  \u2514 Bot will ask for trade count after direction\n"
+        "`EURUSD 5 10` \u2014 Send signal for 10 trades auto\n"
+        "  \u2514 Result sent automatically after BUY/SELL\n"
+        "`5` or `10` \u2014 Send *OPEN X TRADES NOW* to VIP\n\n"
+        "\U0001f4cd After signal: tap *BUY / SELL / Cancel*\n"
+        "\u2705 After direction: tap *WIN / LOSS*\n\n"
         "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f4c5 *SESSION*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
-        "`/session` \u2014 Send 30min or 1hr alert\n"
-        "\u25b6\ufe0f Send Start Now \u2014 button after /session\n"
-        "\u26a0\ufe0f Emergency / Delay \u2014 urgent VIP message\n"
-        "`/end` \u2014 End session (VIP only)\n\n"
-        "After /end buttons:\n"
-        "\u25b6\ufe0f *Replay Session* \u2014 preview to yourself\n"
-        "\U0001f4e2 *Send Replay to Non-VIP* \u2014 attract non-VIP\n"
-        "\U0001f4e2 *Send Results to Non-VIP* \u2014 summary only\n"
-        "\U0001f4e2 *Forward Stats to Channel* \u2014 post to channel\n\n"
+        "`/session` \u2014 Send 30min or 1hr session alert to VIP\n"
+        "  \u2514 Tap *Send Start Now* to begin session\n"
+        "  \u2514 Tap *Emergency/Delay* to send urgent message\n"
+        "`/end` \u2014 End session and send results to VIP\n\n"
+        "Buttons after `/end`:\n"
+        "\u25b6\ufe0f *Replay Session* \u2014 Preview all signals (you only)\n"
+        "\U0001f4e2 *Send Replay to Non-VIP* \u2014 Attract non-VIP members\n"
+        "\U0001f4e2 *Send Results to Non-VIP* \u2014 Results summary only\n"
+        "\U0001f4e2 *Forward Stats to Channel* \u2014 Post to channel\n\n"
         "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f4e2 *BROADCAST*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
-        "Send photo \u2192 VIP only (with watermark)\n"
-        "Send video \u2192 VIP + Non-VIP\n"
+        "Send photo \u2192 VIP only (watermark @EVALONWINNERSBOT)\n"
+        "Send video \u2192 VIP + Non-VIP + Channel (with watermark)\n"
         "Send sticker \u2192 VIP only\n"
-        "`/broadcast text` \u2192 VIP\n"
-        "`/broadcast all text` \u2192 Everyone\n"
-        "Reply to media + `/broadcast` \u2192 VIP\n"
-        "Reply to media + `/broadcast all` \u2192 Everyone\n"
+        "`/broadcast [text]` \u2192 Text to VIP\n"
+        "`/broadcast all [text]` \u2192 Text to everyone\n"
+        "Reply to media + `/broadcast` \u2192 Media to VIP\n"
+        "Reply to media + `/broadcast all` \u2192 Media to everyone\n"
     ))
     await context.bot.send_message(chat_id=chat_id, parse_mode="Markdown", text=(
         "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f511 *VIP CODES*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
-        "`/addcode 1w Name` \u2014 1 Week code\n"
+        "`/addcode 1w Name` \u2014 1 Week code (Free Trial)\n"
         "`/addcode 1m Name` \u2014 1 Month code\n"
         "`/addcode 3m Name` \u2014 3 Months code\n"
         "`/addcode 6m Name` \u2014 6 Months code\n"
         "`/addcode 1y Name` \u2014 1 Year code\n"
-        "`/addcodes 10 1m` \u2014 10 codes (1 Month)\n"
-        "`/listcodes` \u2014 View all codes\n"
-        "`/vipusers` \u2014 View VIP members\n"
-        "`/revoke USER\\_ID` \u2014 Remove VIP access\n\n"
+        "`/addcode 10d Name` \u2014 Custom: any number of days\n"
+        "`/addcodes 10 1m` \u2014 Generate 10 codes (1 Month)\n"
+        "`/listcodes` \u2014 View all codes (used/unused)\n"
+        "`/vipusers` \u2014 View all VIP members + expiry dates\n"
+        "`/trialusers` \u2014 View all users who used Free Trial (ID + name)\n"
+        "`/revoke 123456789` \u2014 Remove VIP access from member\n\n"
         "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f4ca *STATS & FEEDBACK*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
-        "`/feedback` \u2014 Show fake+real feedback in bot (real after 2-3 fake)\n"
-        "`/channelfeedback` \u2014 Select & forward to channel\n"
-        "`/reviewfeedback` \u2014 Approve/reject member feedback\n"
-        "`/realfeedback` or `/realfeedbacks` \u2014 View all real feedback (no notifications sent)\n"
-        "`/stats` \u2014 Full statistics\n"
-        "`/dbstatus` \u2014 Database health\n\n"
-        "ðŸ’¡ _Member feedback is saved silently â€” no admin pings. Check /realfeedbacks anytime._\n\n"
+        "`/stats` \u2014 Full stats: wins, losses, members, weekly\n"
+        "`/dbstatus` \u2014 Check database health (PostgreSQL)\n"
+        "`/feedback` \u2014 Show feedback (fake + real) in sequence\n"
+        "`/channelfeedback` \u2014 Select feedback to forward to channel\n"
+        "`/reviewfeedback` \u2014 Approve or reject member feedback\n"
+        "`/realfeedback` \u2014 View all real feedback (no notification)\n"
+        "`/realfeedbacks` \u2014 Same as /realfeedback\n\n"
+        "\U0001f4a1 _Feedback is saved silently \u2014 no admin pings. Check /realfeedbacks anytime._\n\n"
         "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\U0001f5bc *MEDIA & FILE IDs*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
-        "`/getid` \u2192 send sticker/photo \u2192 get file\\_id\n"
-        "`/setwelcome` \u2192 send photo \u2192 set welcome image\n"
+        "`/getid` \u2014 Send sticker/photo \u2192 get its file\\_id\n"
+        "`/setwelcome` \u2014 Send photo \u2192 set as welcome image\n\n"
+        "â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n\u2699\ufe0f *GENERAL*\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”\n"
+        "`/start` \u2014 Show welcome message (any user)\n"
+        "`/help` \u2014 Show this admin guide (admin only)\n"
     ))
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2572,7 +2754,7 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "ðŸ“Š *EVALON VIP SIGNALS â€” STATS*\n",
         f"\nðŸ’¾ Storage: *{'âœ… PostgreSQL' if DATABASE_URL else 'âš ï¸ Local JSON'}*\n",
         "\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”",
-        f"\nðŸ“£ Display count : *{BASE_MEMBERS + vip}*",
+        f"\n\U0001f4e3 Display count : *{get_base_members() + vip}*",
         f"\nðŸ’Ž VIP members   : *{vip}*",
         f"\nðŸ”“ Non-VIP       : *{len(users) - vip}*\n",
         "â”â”â”â”â”â”â”â”â”â”â”â”â”â”",
@@ -2596,22 +2778,38 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cmd_addcode(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     # Usage: /addcode [duration] [label]
-    # duration: 1w | 1m | 3m | 1y  (default: 1m)
+    # duration: 1w | 1m | 3m | 6m | 1y | Xd (e.g. 10d, 3d, 45d)
     args = context.args or []
-    if args and args[0].lower() in VIP_DURATIONS:
-        dur   = args[0].lower()
-        label = " ".join(args[1:]) if len(args) > 1 else "VIP User"
+    dur         = "1m"
+    label       = "VIP User"
+    custom_days = None
+
+    if args:
+        first = args[0].lower()
+        # Check custom days format e.g. 10d, 3d
+        if first.endswith("d") and first[:-1].isdigit():
+            custom_days = int(first[:-1])
+            custom_days = max(1, min(custom_days, 3650))  # 1 day to 10 years cap
+            label = " ".join(args[1:]) if len(args) > 1 else "VIP User"
+        elif first in VIP_DURATIONS:
+            dur   = first
+            label = " ".join(args[1:]) if len(args) > 1 else "VIP User"
+        else:
+            label = " ".join(args)
+
+    code, days = new_code(label, dur, custom_days=custom_days)
+
+    if custom_days:
+        dur_display = f"{custom_days} Days"
     else:
-        dur   = "1m"
-        label = " ".join(args) if args else "VIP User"
-    code, days = new_code(label, dur)
-    dur_labels = {"1w": "1 Week", "1m": "1 Month", "3m": "3 Months", "6m": "6 Months", "1y": "1 Year"}
+        dur_display = {"1w": "1 Week (Free Trial)", "1m": "1 Month", "3m": "3 Months", "6m": "6 Months", "1y": "1 Year"}[dur]
+
     await update.message.reply_text(
-        f"âœ… *VIP Code Created!*\n\n"
-        f"ðŸ‘¤ *{label}*\n"
-        f"ðŸ”‘ `{code}`\n"
-        f"â³ Duration: *{dur_labels[dur]}* ({days} days)\n\n"
-        f"ðŸ“Œ Usage: `/addcode 1w`, `/addcode 1m`, `/addcode 3m`, `/addcode 1y`",
+        f"\u2705 *VIP Code Created!*\n\n"
+        f"\U0001f464 *{label}*\n"
+        f"\U0001f511 `{code}`\n"
+        f"\u23f3 Duration: *{dur_display}* ({days} days)\n\n"
+        f"\U0001f4cc Usage: `/addcode 10d Name` `/addcode 3d Name` `/addcode 1m Name`",
         parse_mode="Markdown"
     )
 
@@ -2652,8 +2850,43 @@ async def cmd_vipusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db = load_db(); lines = [f"ðŸ‘¥ *VIP MEMBERS ({get_display_count()} total):*\n"]
     for vid in vids:
         info = db["users"].get(str(vid), {})
-        lines.append(f"ðŸ‘¤ *{info.get('name','?')}*  |  ðŸ”‘ `{info.get('vip_code','?')}`  |  ðŸ“… {info.get('joined_date','?')}")
+        lines.append(f"ðŸ‘¤ *{info.get('name','?')}*  |  \U0001f511 `{info.get('vip_code','?')}`  |  \U0001f4c5 {info.get('joined_date','?')}")
     await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+async def cmd_trialusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id): return
+    db = load_db()
+    trial_users = db.get("trial_users", {})
+    if not trial_users:
+        await update.message.reply_text("\U0001f194 *No Free Trial users yet.*", parse_mode="Markdown")
+        return
+    lines = [f"\U0001f194 *FREE TRIAL USERS â€” {len(trial_users)} total*\n"]
+    for uid_str, info in trial_users.items():
+        name = info.get("name", "?")
+        date = info.get("date", "?")
+        code = info.get("code", "?")
+        lines.append(
+            f"ðŸ‘¤ *{name}*\n"
+            f"   \U0001f194 ID: `{uid_str}`\n"
+            f"   \U0001f511 `{code}`\n"
+            f"   \U0001f4c5 {date}\n"
+        )
+    # Split if too long
+    text = "\n".join(lines)
+    if len(text) > 4000:
+        chunks = []
+        chunk = lines[0] + "\n"
+        for line in lines[1:]:
+            if len(chunk) + len(line) > 4000:
+                chunks.append(chunk)
+                chunk = line + "\n"
+            else:
+                chunk += line + "\n"
+        chunks.append(chunk)
+        for chunk in chunks:
+            await update.message.reply_text(chunk, parse_mode="Markdown")
+    else:
+        await update.message.reply_text(text, parse_mode="Markdown")
 
 async def cmd_revoke(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
@@ -2767,33 +3000,33 @@ async def _do_expiry_check(bot):
                     await bot.send_message(
                         chat_id=uid,
                         text=(
-                            f"â° *Dear {name},*\n\n"
+                            f"\u23f0 *Dear {name},*\n\n"
                             f"Your *Free Trial* will end in *3 days* ({expiry_str}).\n\n"
                             f"To continue receiving VIP signals, you have two options:\n\n"
-                            f"âœ… Subscribe to *Evalon Trader VIP* and continue enjoying all premium signals, updates, and VIP benefits without interruption.\n\n"
-                            f"âœ… Or continue using *Free Trial* rewards by inviting your friends.\n\n"
-                            f"ðŸ“Œ Invite at least *5 people* to qualify for additional Free Trial days.\n\n"
+                            f"\u2705 Subscribe to *Evalon Trader VIP* and continue enjoying all premium signals, updates, and VIP benefits without interruption.\n\n"
+                            f"\u2705 Or continue using *Free Trial* rewards by inviting your friends.\n\n"
+                            f"\U0001f4cc Invite at least *5 people* to qualify for additional Free Trial days.\n\n"
                             f"The more people you invite, the more free access and VIP signals you can continue to enjoy.\n\n"
                             f"If you do not wish to invite others, you can subscribe to VIP and continue receiving signals without any limitations.\n\n"
-                            f"ðŸ‘‘ *ALWAYS EVALON TRADER IS THE KING OF FINANCE* ðŸ‘‘"
+                            f"\U0001f451 *ALWAYS EVALON TRADER IS THE KING OF FINANCE* \U0001f451"
                         ),
                         parse_mode="Markdown",
                         reply_markup=InlineKeyboardMarkup([[
-                            InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
+                            InlineKeyboardButton("\U0001f4ac Contact Admin", url=SUPPORT_URL)
                         ]])
                     )
                 else:
                     await bot.send_message(
                         chat_id=uid,
                         text=(
-                            f"â° *Dear {name},*\n\n"
-                            f"Your VIP access *expires in 3 days* â€” on *{expiry_str}*.\n\n"
+                            f"\u23f0 *Dear {name},*\n\n"
+                            f"Your VIP access *expires in 3 days* \u2014 on *{expiry_str}*.\n\n"
                             f"Contact admin now to renew and keep receiving signals without interruption.\n\n"
                             f"{KAULI_MBIU}"
                         ),
                         parse_mode="Markdown",
                         reply_markup=InlineKeyboardMarkup([[
-                            InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
+                            InlineKeyboardButton("\U0001f4ac Contact Admin", url=SUPPORT_URL)
                         ]])
                     )
             except: pass
@@ -2803,20 +3036,20 @@ async def _do_expiry_check(bot):
                 await bot.send_message(
                     chat_id=uid,
                     text=(
-                        f"ðŸš¨ *Last Warning, {name}!*\n\n"
-                        f"Your VIP access *expires TOMORROW* â€” *{expiry_str}*.\n\n"
+                        f"\U0001f6a8 *Last Warning, {name}!*\n\n"
+                        f"Your VIP access *expires TOMORROW* \u2014 *{expiry_str}*.\n\n"
                         f"Renew *today* to avoid losing access to signals!\n\n"
                         f"{KAULI_MBIU}"
                     ),
                     parse_mode="Markdown",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
+                        InlineKeyboardButton("\U0001f4ac Contact Admin", url=SUPPORT_URL)
                     ]])
                 )
             except: pass
 
 async def check_vip_expiry(context):
-    """Runs daily â€” warns users 3 days before expiry, revokes on expiry."""
+    """Runs daily \u2014 warns users 3 days before expiry, revokes on expiry."""
     db    = load_db()
     today = datetime.now().date()
     bot   = context.bot
@@ -2844,15 +3077,15 @@ async def check_vip_expiry(context):
                 await bot.send_message(
                     chat_id=uid,
                     text=(
-                        f"âš ï¸ *Dear {name},*\n\n"
+                        f"\u26a0\ufe0f *Dear {name},*\n\n"
                         f"Your *VIP access has expired* today ({expiry_str}).\n"
                         f"You no longer have access to signals.\n\n"
-                        f"ðŸ’Ž Contact admin to renew your VIP access.\n\n"
+                        f"\U0001f48e Contact admin to renew your VIP access.\n\n"
                         f"{KAULI_MBIU}"
                     ),
                     parse_mode="Markdown",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
+                        InlineKeyboardButton("\U0001f4ac Contact Admin", url=SUPPORT_URL)
                     ]])
                 )
             except: pass
@@ -2870,33 +3103,33 @@ async def check_vip_expiry(context):
                     await bot.send_message(
                         chat_id=uid,
                         text=(
-                            f"â° *Dear {name},*\n\n"
+                            f"\u23f0 *Dear {name},*\n\n"
                             f"Your *Free Trial* will end in *3 days* ({expiry_str}).\n\n"
                             f"To continue receiving VIP signals, you have two options:\n\n"
-                            f"âœ… Subscribe to *Evalon Trader VIP* and continue enjoying all premium signals, updates, and VIP benefits without interruption.\n\n"
-                            f"âœ… Or continue using *Free Trial* rewards by inviting your friends.\n\n"
-                            f"ðŸ“Œ Invite at least *5 people* to qualify for additional Free Trial days.\n\n"
+                            f"\u2705 Subscribe to *Evalon Trader VIP* and continue enjoying all premium signals, updates, and VIP benefits without interruption.\n\n"
+                            f"\u2705 Or continue using *Free Trial* rewards by inviting your friends.\n\n"
+                            f"\U0001f4cc Invite at least *5 people* to qualify for additional Free Trial days.\n\n"
                             f"The more people you invite, the more free access and VIP signals you can continue to enjoy.\n\n"
                             f"If you do not wish to invite others, you can subscribe to VIP and continue receiving signals without any limitations.\n\n"
-                            f"ðŸ‘‘ *ALWAYS EVALON TRADER IS THE KING OF FINANCE* ðŸ‘‘"
+                            f"\U0001f451 *ALWAYS EVALON TRADER IS THE KING OF FINANCE* \U0001f451"
                         ),
                         parse_mode="Markdown",
                         reply_markup=InlineKeyboardMarkup([[
-                            InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
+                            InlineKeyboardButton("\U0001f4ac Contact Admin", url=SUPPORT_URL)
                         ]])
                     )
                 else:
                     await bot.send_message(
                         chat_id=uid,
                         text=(
-                            f"â° *Dear {name},*\n\n"
-                            f"Your VIP access *expires in 3 days* â€” on *{expiry_str}*.\n\n"
+                            f"\u23f0 *Dear {name},*\n\n"
+                            f"Your VIP access *expires in 3 days* \u2014 on *{expiry_str}*.\n\n"
                             f"Contact admin now to renew and keep receiving signals without interruption.\n\n"
                             f"{KAULI_MBIU}"
                         ),
                         parse_mode="Markdown",
                         reply_markup=InlineKeyboardMarkup([[
-                            InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
+                            InlineKeyboardButton("\U0001f4ac Contact Admin", url=SUPPORT_URL)
                         ]])
                     )
             except: pass
@@ -2906,14 +3139,14 @@ async def check_vip_expiry(context):
                 await bot.send_message(
                     chat_id=uid,
                     text=(
-                        f"ðŸš¨ *Last Warning, {name}!*\n\n"
-                        f"Your VIP access *expires TOMORROW* â€” *{expiry_str}*.\n\n"
+                        f"\U0001f6a8 *Last Warning, {name}!*\n\n"
+                        f"Your VIP access *expires TOMORROW* \u2014 *{expiry_str}*.\n\n"
                         f"Renew *today* to avoid losing access to signals!\n\n"
                         f"{KAULI_MBIU}"
                     ),
                     parse_mode="Markdown",
                     reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("ðŸ’¬ Contact Admin", url=SUPPORT_URL)
+                        InlineKeyboardButton("\U0001f4ac Contact Admin", url=SUPPORT_URL)
                     ]])
                 )
             except: pass
@@ -2953,6 +3186,7 @@ def main():
     app.add_handler(CommandHandler("addcodes",     cmd_addcodes))
     app.add_handler(CommandHandler("listcodes",    cmd_listcodes))
     app.add_handler(CommandHandler("vipusers",     cmd_vipusers))
+    app.add_handler(CommandHandler("trialusers",   cmd_trialusers))
     app.add_handler(CommandHandler("revoke",       cmd_revoke))
     app.add_handler(CommandHandler("dbstatus",     cmd_dbstatus))
     app.add_handler(CommandHandler("getid",        cmd_getid))
