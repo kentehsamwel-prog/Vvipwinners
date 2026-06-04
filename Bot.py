@@ -1336,8 +1336,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["fb_rating"]  = rating
         context.user_data["fb_waiting"] = True
         await q.edit_message_reply_markup(reply_markup=None)
+        stars = "\u2b50" * rating
         await context.bot.send_message(chat_id=chat,
-            text=f"Thank you! You rated: *{'\u2b50'*rating}*\n\nType a comment or /skip:",
+            text=f"Thank you! You rated: *{stars}*\n\nType a comment or /skip:",
             parse_mode="Markdown")
         return
 
