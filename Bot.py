@@ -326,9 +326,9 @@ def current_time_utc():
 KAULI_MBIU = "\U0001f451 *ALWAYS EVALON TRADER IS THE KING OF BINARY* \U0001f451"
 
 WHY_WE_MOVED = (
-    "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n"
+    "--------------"+"\n"
     "\U0001f525 *Why We Moved From Our VIP Channel To The Bot System* \U0001f525\n"
-    "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n\n"
+    "--------------"+"\n\n"
     "Many people keep asking why we moved from our VIP channel with thousands of members into a private bot system.\n\n"
     "The answer is simple \u2014 we wanted a system that is *faster, safer, more organized, and more reliable* for real VIP members.\n\n"
     "The old VIP channel started facing several problems:\n\n"
@@ -340,11 +340,11 @@ WHY_WE_MOVED = (
     "\u2022 Manual approvals sometimes delayed access for new members\n\n"
     "To improve the overall experience, we created the bot system.\n\n"
     "\U0001f680 The bot delivers signals *faster, earlier, and automatically* without unnecessary delays.\n"
-    "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n"
+    "--------------"+"\n"
 )
 
 VIP_RULES = (
-    "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n"
+    "--------------"+"\n"
     "\U0001f4cb *RULES OF EVALON WINNERS:*\n\n"
     "1\ufe0f\u20e3 ONLY INVEST WHAT YOU CAN AFFORD TO LOSE\n"
     "2\ufe0f\u20e3 FOLLOW THE SIGNAL \u2014 AVOID EMOTIONS\n"
@@ -361,7 +361,7 @@ VIP_RULES = (
     "1\ufe0f\u20e33\ufe0f\u20e3 NEVER BORROW MONEY TO INVEST \u2014 TOO RISKY\n"
     "1\ufe0f\u20e34\ufe0f\u20e3 TRADE WITH A CLEAR MIND \u2014 NOT ANGER OR ALCOHOL\n"
     "2\ufe0f\u20e30\ufe0f\u20e3 EVALON WINNERS \u2014 WE RISE TOGETHER!\n"
-    "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n"
+    "--------------"+"\n"
 )
 
 SESSION_STATS    = {"wins": 0, "losses": 0, "start_time": None}
@@ -595,14 +595,14 @@ def msg_preparing(pair, expiry, trades=1):
     tline = f"\U0001f4a5 TRADES  : *{trades}*\n" if trades > 1 else ""
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n"
+        "--------------"+"\n"
         f"\U0001f4ca PAIR    : *{pair}*\n"
         f"\u23f1 EXPIRY  : *{expiry} MIN*\n"
         f"{tline}"
         f"\U0001f550 TIME    : *{current_time_utc()}*\n"
         "\U0001f4cd STATUS  : SIGNAL PREPARING...\n\n"
         "\u26a0\ufe0f WAIT FOR DIRECTION\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n\n"
+        "--------------"+"\n\n"
         "\U0001f525 STAY READY \u2014 ENTRY COMING SOON\n"
         "\U0001f48e VVIP MEMBERS ONLY"
     )
@@ -612,12 +612,12 @@ def msg_direction(pair, expiry, direction, trades=1):
     color = "\U0001f7e2" if direction == "BUY" else "\U0001f534"
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n"
+        "--------------"+"\n"
         f"\U0001f4ca PAIR      : *{pair}*\n"
         f"\u23f1 EXPIRY    : *{expiry} MIN*\n"
         f"\U0001f550 ENTRY     : *{current_time_utc()}*\n"
         f"{arrow} DIRECTION : *{color} {direction}*\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n\n"
+        "--------------"+"\n\n"
         "\u26a1 *OPEN YOUR TRADE NOW!*\n"
         "\U0001f48e VVIP MEMBERS ONLY"
     )
@@ -625,12 +625,12 @@ def msg_direction(pair, expiry, direction, trades=1):
 def msg_win(pair, expiry, direction, count=1):
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n"
+        "--------------"+"\n"
         f"\U0001f4ca PAIR      : *{pair}*\n"
         f"\u23f1 EXPIRY    : *{expiry} MIN*\n"
         f"\U0001f4c8 DIRECTION : *{direction}*\n"
         f"\U0001f3c6 RESULT    : *WIN \u2705 x{count}*\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n\n"
+        "--------------"+"\n\n"
         "\U0001f4b0 *Congratulations! Another profit secured!*\n"
         "\U0001f525 Stay focused \u2014 more signals coming!\n"
         "\U0001f48e VVIP MEMBERS ONLY"
@@ -639,12 +639,12 @@ def msg_win(pair, expiry, direction, count=1):
 def msg_loss(pair, expiry, direction, count=1):
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n"
+        "--------------"+"\n"
         f"\U0001f4ca PAIR      : *{pair}*\n"
         f"\u23f1 EXPIRY    : *{expiry} MIN*\n"
         f"\U0001f4c8 DIRECTION : *{direction}*\n"
         f"\U0001f534 RESULT    : *LOSS x{count}*\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n\n"
+        "--------------"+"\n\n"
         "\U0001f4aa *Stay strong! Every loss is a lesson!*\n"
         "\U0001f9e0 Protect your capital \u2014 next signal coming!\n"
         "\U0001f6ab No Martingale \u2014 trust the process!\n"
@@ -656,9 +656,9 @@ def msg_session_soon(minutes, is_vip=False):
     rules = f"\n{VIP_RULES}" if is_vip else "\n"
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n"
+        "--------------"+"\n"
         f"\u23f0 SESSION STARTING IN *{when.upper()}*\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n\n"
+        "--------------"+"\n\n"
         "\U0001f4cb *Get ready:*\n"
         "\u2705 Open your binary broker account\n"
         "\u2705 Set correct expiry time\n"
@@ -685,17 +685,17 @@ def msg_session_end(wins=0, losses=0):
             dur_line = f"\u23f1 DURATION : *{h}h {m}min*\n"
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+        "--------------\n"
         "\U0001f3c1 *TRADING SESSION ENDED*\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+        "--------------\n\n"
         "That's a wrap for today's session!\n\n"
         "\U0001f4ca *SESSION RESULTS:*\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+        "--------------\n"
         f"\u2705 WIN      : *{wins}*\n"
         f"\u274c LOSS     : *{losses}*\n"
         f"\U0001f4c8 ACCURACY : *{acc}*\n"
         f"{dur_line}"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+        "--------------\n\n"
         "\U0001f4aa Great discipline leads to consistent profits!\n"
         "\U0001f550 Next session will be announced soon!\n\n"
         "Thank you for trading with us!\n\n"
@@ -705,10 +705,10 @@ def msg_session_end(wins=0, losses=0):
 def msg_cancelled(pair):
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n"
+        "--------------"+"\n"
         f"\U0001f4ca PAIR   : *{pair}*\n"
         "\u274c STATUS : *SIGNAL CANCELLED*\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n\n"
+        "--------------"+"\n\n"
         "\u23ed Skip this one \u2014 next signal coming soon!\n"
         "\U0001f9e0 Patience is the key to success!\n"
         "\U0001f48e VVIP MEMBERS ONLY"
@@ -851,9 +851,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"\U0001f44b Welcome, *{name}!*\n\n"
             "\u26a1 *EVALON VIP SIGNALS*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+            "--------------\n\n"
             "\U0001f4e6 *WHAT YOU GET AS VIP:*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+            "--------------\n"
             "\U0001f4ca Daily Trading Signals\n"
             "\u23f1 Multiple Expiry Times\n"
             "\U0001f4c8 BUY/SELL Direction\n"
@@ -861,7 +861,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "\U0001f525 High Confidence Alerts\n"
             "\U0001f4c9 8-10 Trades Per Day \u2014 Monday to Friday\n"
             "\U0001f4cb Session Start & End Notifications\n\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+            "--------------\n"
             "To access this bot, first join our official channel:\n\n"
             "\U0001f4e2 *Evalon Winners Channel*\n\n"
             "Tap *Join Our Channel* then *I Have Joined* \U0001f447\n\n"
@@ -881,7 +881,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"\U0001f44b Welcome back, *{name}!*\n\n"
             "\u26a1 *EVALON VIP SIGNALS*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+            "--------------\n\n"
             "\U0001f512 *VIP ACCESS REQUIRED*\n\n"
             "\u2705 Real market signals \u2014 Monday to Friday\n"
             "\u2705 Non-Martingale strategy only\n"
@@ -889,7 +889,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "\u2705 Win/Loss updates after every trade\n"
             "\u2705 Consistent signal delivery during market hours\n\n"
             f"\u23f0 *Monday \u2014 Friday only* | {mday}\n\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+            "--------------\n\n"
             f"{WHY_WE_MOVED}\n"
             "\U0001f511 Have a code? Tap below\n"
             "\U0001f4ac VIP access available through admin approval \U0001f447\n\n"
@@ -908,7 +908,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"\U0001f44b Welcome back, *{name}!* \U0001f48e\n\n"
         "\u26a1 *EVALON VIP SIGNALS*\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+        "--------------\n\n"
         "\U0001f512 *VIP ACCESS REQUIRED*\n\n"
         "\u2705 Real market signals \u2014 Monday to Friday\n"
         "\u2705 Non-Martingale strategy only\n"
@@ -916,7 +916,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "\u2705 Win/Loss updates after every trade\n"
         "\u2705 Consistent signal delivery during market hours\n\n"
         f"\u23f0 *Monday \u2014 Friday only* | {mday}\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+        "--------------\n\n"
         f"{WHY_WE_MOVED}\n"
         "\U0001f511 Have a code? Tap below\n"
         "\U0001f4ac VIP access available through admin approval\n\n"
@@ -992,19 +992,19 @@ async def _process_result(update, context, result, sig_id, count, query=None):
 
     admin_summary = (
         f"\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+        "--------------\n"
         f"\U0001f4ca PAIR      : *{pair}*\n"
         f"\u23f1 EXPIRY    : *{expiry} MIN*\n"
         f"\U0001f4c8 DIRECTION : *{direction}*\n"
         f"{icon} RESULT    : *{result} x{count}*\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+        "--------------\n\n"
         "\U0001f4ca *SESSION SO FAR:*\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+        "--------------\n"
         f"\u2705 WIN      : *{wins_so_far}*\n"
         f"\u274c LOSS     : *{losses_so_far}*\n"
         f"\U0001f4c8 ACCURACY : *{acc}*\n"
         f"{dur_line}"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+        "--------------\n\n"
         "\U0001f48e VVIP MEMBERS ONLY"
     )
 
@@ -1065,9 +1065,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         vip_ids    = get_vip_ids()
         start_text = (
             "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n"
+            "--------------"+"\n"
             "\U0001f7e2 *SESSION IS STARTING NOW!*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n\n"
+            "--------------"+"\n\n"
             "\u2705 Get your charts ready\n"
             "\u2705 Set your expiry time\n"
             "\u2705 Wait for the signal\n\n"
@@ -1109,7 +1109,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Record session end in full log
         FULL_SESSION_LOG.append({"type": "sticker", "content": SESSION_CLOSE_STICKER})
         FULL_SESSION_LOG.append({"type": "text",    "content": text})
-        fb_text    = "\n\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\U0001f4dd *Rate today's session:*\nTap a number (1 = poor, 5 = excellent)"
+        fb_text    = "\n\n------------------\n\U0001f4dd *Rate today's session:*\nTap a number (1 = poor, 5 = excellent)"
         fb_kb      = kb_feedback(session_id)
         async def _send_session_end(vid):
             try: await context.bot.send_sticker(chat_id=vid, sticker=SESSION_CLOSE_STICKER, protect_content=True)
@@ -1170,21 +1170,21 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             trades_lines += f"{idx}\ufe0f\u20e3 {entry['pair']} | {arrow_t} {entry['direction']} | {icon_t} {entry['result']}\n"
         channel_stats = (
             "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+            "--------------\n"
             "\U0001f3c1 *SESSION RESULTS*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+            "--------------\n\n"
             f"\u2705 WIN      : *{wins_s}*\n"
             f"\u274c LOSS     : *{losses_s}*\n"
             f"\U0001f4c8 ACCURACY : *{acc_s}*\n"
             f"{dur_line}"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+            "--------------\n\n"
         )
         if trades_lines:
             channel_stats += (
                 "\U0001f4cb *TRADE BREAKDOWN:*\n"
-                "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+                "--------------\n"
                 f"{trades_lines}"
-                "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+                "--------------\n\n"
             )
         channel_stats += f"{KAULI_MBIU}"
         try:
@@ -1260,13 +1260,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         acc_r   = f"{(wins_r/total_r*100):.1f}%" if total_r > 0 else "N/A"
         promo = (
             "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+            "--------------\n"
             "That was today's LIVE session \u2014 for VIP members only.\n\n"
             f"\U0001f4ca *SESSION RESULTS:*\n"
             f"\u2705 WIN      : *{wins_r}*\n"
             f"\u274c LOSS     : *{losses_r}*\n"
             f"\U0001f4c8 ACCURACY : *{acc_r}*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+            "--------------\n\n"
             "\U0001f48e Want to receive these signals LIVE?\n"
             "Get your VIP access today and never miss a trade!\n\n"
             f"{KAULI_MBIU}"
@@ -1301,13 +1301,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         acc_r   = f"{(wins_r/total_r*100):.1f}%" if total_r > 0 else "N/A"
         results_msg = (
             "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+            "--------------\n"
             "\U0001f4ca *TODAY'S SESSION RESULTS:*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+            "--------------\n"
             f"\u2705 WIN      : *{wins_r}*\n"
             f"\u274c LOSS     : *{losses_r}*\n"
             f"\U0001f4c8 ACCURACY : *{acc_r}*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+            "--------------\n\n"
             "\U0001f48e These are the results our VIP members received today!\n"
             "Join VIP and start profiting with us!\n\n"
             f"{KAULI_MBIU}"
@@ -1419,16 +1419,16 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         acc_nv   = f"{(wins_nv/total_nv*100):.1f}%" if total_nv > 0 else "N/A"
         novip_msg = (
             "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+            "--------------\n"
             f"\U0001f4ca PAIR      : *{nv_pair}*\n"
             f"{icon_nv} RESULT    : *{nv_result} x{nv_count}*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+            "--------------\n\n"
             "\U0001f4ca *SESSION SO FAR:*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+            "--------------\n"
             f"\u2705 WIN      : *{wins_nv}*\n"
             f"\u274c LOSS     : *{losses_nv}*\n"
             f"\U0001f4c8 ACCURACY : *{acc_nv}*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+            "--------------\n\n"
             "\U0001f48e *These are LIVE results our VIP members receive!*\n"
             "Get VIP access today and profit with us!\n\n"
             f"{KAULI_MBIU}"
@@ -1465,16 +1465,16 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         icon_now   = "\u2705" if fwd_result == "WIN" else "\u274c"
         channel_text = (
             f"\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+            "--------------\n"
             f"\U0001f4ca PAIR      : *{fwd_pair}*\n"
             f"{icon_now} RESULT    : *{fwd_result} x{fwd_count}*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+            "--------------\n\n"
             "\U0001f4ca *SESSION SO FAR:*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+            "--------------\n"
             f"\u2705 WIN      : *{wins_now}*\n"
             f"\u274c LOSS     : *{losses_now}*\n"
             f"\U0001f4c8 ACCURACY : *{acc_now}*\n"
-            "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n"
+            "--------------\n\n"
             f"{KAULI_MBIU}"
         )
         try:
@@ -1702,7 +1702,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             vip_ids = get_vip_ids()
             await send_to_list(context, vip_ids, text=(
                 "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
-                "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n\u26a0\ufe0f *IMPORTANT UPDATE*\n"+"\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501"+"\n\n"
+                "--------------"+"\n\u26a0\ufe0f *IMPORTANT UPDATE*\n"+"--------------"+"\n\n"
                 f"{text}\n\n\U0001f48e VVIP MEMBERS ONLY"
             ))
             await update.message.reply_text("\u26a0\ufe0f *Emergency message sent!*", parse_mode="Markdown", protect_content=True,
@@ -2083,7 +2083,7 @@ async def end_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     vip_ids    = get_vip_ids()
     text       = msg_session_end(SESSION_STATS["wins"], SESSION_STATS["losses"])
     session_id = str(int(time.time()))
-    fb_text    = "\n\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\U0001f4dd *Rate today's session:*\nTap a number (1 = poor, 5 = excellent)"
+    fb_text    = "\n\n------------------\n\U0001f4dd *Rate today's session:*\nTap a number (1 = poor, 5 = excellent)"
     # FIX 4: VIP only
     for vid in vip_ids:
         try: await context.bot.send_message(chat_id=vid, text=text+fb_text,
@@ -2648,7 +2648,7 @@ async def cmd_realfeedbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def _send_help(chat_id, context):
     await context.bot.send_message(chat_id=chat_id, parse_mode="Markdown", text=(
         "\U0001f4d6 *EVALON VIP SIGNALS \u2014 ADMIN GUIDE*\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\U0001f4e1 *SIGNALS*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+        "--------------\n\U0001f4e1 *SIGNALS*\n--------------\n"
         "`EURUSD 5` \u2014 Send signal for 1 trade\n"
         "  \u2514 Bot will ask for trade count after direction\n"
         "`EURUSD 5 10` \u2014 Send signal for 10 trades auto\n"
@@ -2656,7 +2656,7 @@ async def _send_help(chat_id, context):
         "`5` or `10` \u2014 Send *OPEN X TRADES NOW* to VIP\n\n"
         "\U0001f4cd After signal: tap *BUY / SELL / Cancel*\n"
         "\u2705 After direction: tap *WIN / LOSS*\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\U0001f4c5 *SESSION*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+        "--------------\n\U0001f4c5 *SESSION*\n--------------\n"
         "`/session` \u2014 Send 30min or 1hr session alert to VIP\n"
         "  \u2514 Tap *Send Start Now* to begin session\n"
         "  \u2514 Tap *Emergency/Delay* to send urgent message\n"
@@ -2666,7 +2666,7 @@ async def _send_help(chat_id, context):
         "\U0001f4e2 *Send Replay to Non-VIP* \u2014 Attract non-VIP members\n"
         "\U0001f4e2 *Send Results to Non-VIP* \u2014 Results summary only\n"
         "\U0001f4e2 *Forward Stats to Channel* \u2014 Post to channel\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\U0001f4e2 *BROADCAST*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+        "--------------\n\U0001f4e2 *BROADCAST*\n--------------\n"
         "Send photo \u2192 VIP only (watermark @EVALONWINNERSBOT)\n"
         "Send video \u2192 VIP + Non-VIP + Channel (with watermark)\n"
         "Send sticker \u2192 VIP only\n"
@@ -2676,7 +2676,7 @@ async def _send_help(chat_id, context):
         "Reply to media + `/broadcast all` \u2192 Media to everyone\n"
     ))
     await context.bot.send_message(chat_id=chat_id, parse_mode="Markdown", text=(
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\U0001f511 *VIP CODES*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+        "--------------\n\U0001f511 *VIP CODES*\n--------------\n"
         "`/addcode 1w Name` \u2014 1 Week code (Free Trial)\n"
         "`/addcode 1m Name` \u2014 1 Month code\n"
         "`/addcode 3m Name` \u2014 3 Months code\n"
@@ -2688,7 +2688,7 @@ async def _send_help(chat_id, context):
         "`/vipusers` \u2014 View all VIP members + expiry dates\n"
         "`/trialusers` \u2014 View all users who used Free Trial (ID + name)\n"
         "`/revoke 123456789` \u2014 Remove VIP access from member\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\U0001f4ca *STATS & FEEDBACK*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+        "--------------\n\U0001f4ca *STATS & FEEDBACK*\n--------------\n"
         "`/stats` \u2014 Full stats: wins, losses, members, weekly\n"
         "`/dbstatus` \u2014 Check database health (PostgreSQL)\n"
         "`/feedback` \u2014 Show feedback (fake + real) in sequence\n"
@@ -2697,10 +2697,10 @@ async def _send_help(chat_id, context):
         "`/realfeedback` \u2014 View all real feedback (no notification)\n"
         "`/realfeedbacks` \u2014 Same as /realfeedback\n\n"
         "\U0001f4a1 _Feedback is saved silently \u2014 no admin pings. Check /realfeedbacks anytime._\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\U0001f5bc *MEDIA & FILE IDs*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+        "--------------\n\U0001f5bc *MEDIA & FILE IDs*\n--------------\n"
         "`/getid` \u2014 Send sticker/photo \u2192 get its file\\_id\n"
         "`/setwelcome` \u2014 Send photo \u2192 set as welcome image\n\n"
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\u2699\ufe0f *GENERAL*\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n"
+        "--------------\n\u2699\ufe0f *GENERAL*\n--------------\n"
         "`/start` \u2014 Show welcome message (any user)\n"
         "`/help` \u2014 Show this admin guide (admin only)\n"
     ))
@@ -2753,21 +2753,21 @@ async def cmd_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lines = [
         "\U0001f4ca *EVALON VIP SIGNALS \u2014 STATS*\n",
         f"\n\U0001f4be Storage: *{'\u2705 PostgreSQL' if DATABASE_URL else '\u26a0\ufe0f Local JSON'}*\n",
-        "\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+        "\n--------------",
         f"\n\U0001f4e3 Display count : *{get_base_members() + vip}*",
         f"\n\U0001f48e VIP members   : *{vip}*",
         f"\n\U0001f513 Non-VIP       : *{len(users) - vip}*\n",
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+        "--------------",
         f"\n\U0001f7e2 Active codes : *{sum(1 for c in codes.values() if c.get('used'))}*",
         f"\n\u26aa Unused codes : *{sum(1 for c in codes.values() if not c.get('used'))}*",
         f"\n\U0001f4cb Total codes  : *{len(codes)}*\n",
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+        "--------------",
         f"\n\U0001f4c5 *WEEKLY STATS* ({week})",
         f"\n\u2705 Wins     : *{ww}*",
         f"\n\u274c Losses   : *{wl}*",
         f"\n\U0001f4c8 Accuracy : *{wacc}*",
         f"\n\U0001f3c1 Sessions : *{wsess}*\n",
-        "\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501",
+        "--------------",
         f"\n\u26a1 *CURRENT SESSION*",
         f"\n\u2705 Wins     : *{sw}*",
         f"\n\u274c Losses   : *{sl}*",
