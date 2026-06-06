@@ -860,7 +860,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if is_vip(uid):
             msg = _random.choice(WEEKEND_VIP_MSGS).format(name=name, day=day)
             await update.message.reply_text(msg, parse_mode="Markdown", protect_content=True)
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="\u200b", reply_markup=kb_session())
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=".", reply_markup=kb_session())
         else:
             msg = _random.choice(WEEKEND_NOVIP_MSGS).format(name=name, day=day, link=INVITE_LINK)
             await update.message.reply_text(
@@ -872,7 +872,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("\U0001f511 Get VIP Access", callback_data="enter_code")],
                 ])
             )
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="\u200b", reply_markup=kb_session())
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=".", reply_markup=kb_session())
         return
 
     u = get_user(uid)
@@ -903,7 +903,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="\U0001f446 *Watch how our VIP bot works!*\n\nSee exactly what you will receive as a VIP member. \U0001f3af",
             parse_mode="Markdown", protect_content=True
         )
-        await context.bot.send_message(chat_id=chat_id, text="\u200b", reply_markup=kb_session())
+        await context.bot.send_message(chat_id=chat_id, text=".", reply_markup=kb_session())
         return
 
     if not is_vip(uid):
@@ -932,7 +932,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="\U0001f446 *Watch how our VIP bot works!*\n\nGet your VIP code today and start receiving signals! \U0001f680",
             parse_mode="Markdown", protect_content=True
         )
-        await context.bot.send_message(chat_id=chat_id, text="\u200b", reply_markup=kb_session())
+        await context.bot.send_message(chat_id=chat_id, text=".", reply_markup=kb_session())
         return
 
     mday = "\U0001f7e2 Market Open" if is_market_day() else "\U0001f534 Weekend \u2014 signals resume Monday."
@@ -960,7 +960,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption="\U0001f446 *How to use your VIP signals!*\n\nFollow every signal exactly as shown. Good luck! \U0001f3af",
         parse_mode="Markdown", protect_content=True
     )
-    await context.bot.send_message(chat_id=chat_id, text="\u200b", reply_markup=kb_session())
+    await context.bot.send_message(chat_id=chat_id, text=".", reply_markup=kb_session())
 
 
 # ============================================================
@@ -2246,11 +2246,40 @@ def _make_global_name(used):
     return base.split()[0]
 
 # ============================================================
+# GLOBAL NAME POOL
+# ============================================================
+_GLOBAL_NAMES = [
+    "James","Ali","Sarah","Mike","John","David","Kevin","Chris","Tony","Eric",
+    "Omar","Hassan","Sam","Felix","Ivan","Bruno","Joel","Musa","Bilal","Zara",
+    "Aisha","Fatima","Nina","Grace","Nadia","Victor","Patrick","Raymond","George",
+    "Simon","Thomas","Nathan","Daniel","Andrew","Marcus","Leon","Paul","Rita",
+    "Diana","Sandra","Julia","Helen","Vera","Cindy","Monica","Irene","Ruth",
+    "Khalid","Yusuf","Hamza","Samir","Layla","Mariam","Rania","Amira","Kareem",
+    "Raj","Arjun","Priya","Rahul","Amit","Kiran","Pooja","Neha","Imran","Faisal",
+    "Usman","Ayesha","Zainab","Adeel","Rizwan","Carlos","Miguel","Diego","Sofia",
+    "Kofi","Kwame","Ama","Chidi","Emeka","Ngozi","Tunde","Femi","Simba","Farai",
+    "John K","Ali B","Sarah M","David T","Mike O","James K","Chris A","Eric B",
+    "Tony M","Omar A","Sam L","Felix K","Ivan D","Bruno T","Joel R","Musa H",
+    "Raj K","Imran A","Khalid M","Carlos R","Kofi A","Chidi B","Priya S","Ayesha N",
+]
+_LAST_INITIALS = list("ABCDEFGHJKLMNOPRSTWY")
+
+def _make_global_name(used):
+    import random as _r
+    for _ in range(40):
+        base = _r.choice(_GLOBAL_NAMES)
+        first = base.split()[0]
+        full = (first + " " + _r.choice(_LAST_INITIALS)) if _r.random() < 0.40 else first
+        if full not in used:
+            used.add(full); return full
+    return base.split()[0]
+
+# ============================================================
 # /feedback - real + fake mixed, no approval needed
 # ============================================================
 async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
-    import random, time as _time
+    import random
 
     wins    = SESSION_STATS.get("wins", 0)
     losses  = SESSION_STATS.get("losses", 0)
@@ -2258,127 +2287,108 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     acc_pct = int(wins/total*100) if total > 0 else 100
     acc_str = f"{wins}/{total}" if total > 0 else "all"
 
-    # Seed with time so every call produces different results
-    random.seed(_time.time())
+    _jamt1 = random.choice([1134, 1278, 1403, 1551, 1687, 1812, 1956, 2103, 2287, 2467])
+    JOINED_TODAY = [
+        f"First session here and already {wins} out of {total} won. This is unbelievable",
+        f"Joined today. Already made ${_jamt1} just following the signals. No joke",
+    ]
 
-    # Amounts: majority 1000-10000, minority 200-900
-    SMALL  = [234,267,312,345,389,412,456,489,523,567,612,645,689,723,756,812,845,889,923,956]
-    LARGE  = [1023,1087,1134,1189,1234,1289,1345,1412,1478,1534,1589,1645,1712,1778,1834,1889,1945,2012,2089,2134]
-    XLARGE = [2234,2389,2512,2678,2834,2967,3123,3289,3456,3612,3789,3956,4123,4312,4478,4634,4812,4978,5134,5312]
-    HUGE   = [5567,5812,6134,6389,6623,6978,7234,7512,7823,8134,8456,8712,8967,9234,9512,9789,10123,10456,10789,11234]
-    # Weight: 10% small, 35% large, 35% xlarge, 20% huge
-    ALL_A  = SMALL*2 + LARGE*7 + XLARGE*7 + HUGE*4
-    used_a = set()
+    SMALL_AMOUNTS  = [812,847,873,916,954,978,1023,1087,1134,1178,1215,1267,1312,1389,1423,1478]
+    MEDIUM_AMOUNTS = [1534,1612,1689,1743,1823,1956,2012,2089,2134,2234,2389,2512,2678,2834,2967]
+    LARGE_AMOUNTS  = [3123,3289,3456,3612,3789,3956,4123,4312,4478,4634,4812,4978,5134,5312,5567]
+    XLARGE_AMOUNTS = [5812,6134,6389,6623,6978,7234,7512,7823,8134,8456,8712,9234,9789,10123,10789]
+    ALL_AMOUNTS    = SMALL_AMOUNTS + MEDIUM_AMOUNTS + LARGE_AMOUNTS + XLARGE_AMOUNTS
+    used_amounts   = set()
 
-    def get_amt(pool=None):
-        src = pool or ALL_A
-        avail = [a for a in src if a not in used_a]
-        if not avail: avail = src
-        a = random.choice(avail); used_a.add(a); return a
+    def get_unique_amount(pool=None):
+        src = pool if pool else ALL_AMOUNTS
+        available = [a for a in src if a not in used_amounts]
+        if not available: available = src
+        amt = random.choice(available)
+        used_amounts.add(amt)
+        return amt
 
     used_comments = set()
     def win_comment():
-        a1 = get_amt()
-        a2 = get_amt(LARGE + XLARGE + HUGE)
-        SHORT = [
-            "Boss signals were clean today",
-            "King you never disappoint",
-            "Brother every single one hit today",
-            "All " + str(wins) + " won. Not even joking",
-            "$" + str(a1) + " made just today. Thank you",
-            "On point as always bro",
-            "$" + str(a1) + " profit. Simple and clean",
-            "Boss you delivered today",
-            "Clean session from start to finish",
-            "Evalon never misses",
-            "Every signal landed today",
-            "$" + str(a1) + " richer after this session",
-            "Accuracy " + str(acc_pct) + "% today. Unreal",
-            "Never seen this kind of accuracy before",
-            "$" + str(a1) + " in the bag today",
-            "Evalon hits different every time",
-            "Signals on point. $" + str(a1) + " profit",
-            "Every trade hit today king",
-            "Was ready and it paid off. $" + str(a1),
-            "No cap " + str(acc_pct) + "% accuracy today",
-            "Not one loss today",
-            "Consistency is the key here king",
-            "Session was perfect today",
-            "Every entry was spot on",
-            "$" + str(a1) + " made. Follow the signal and profit",
-            "This accuracy is something else. $" + str(a1),
-            "Followed every signal. $" + str(a1) + " in profit",
-            "Another solid session king",
-            "$" + str(a1) + " secured. Thank you",
-            "Results speak for themselves today",
-            "King you are too consistent",
-            "Profit again. $" + str(a1) + " clean",
-            "Session was fire today",
-            "This is why I renewed my VIP. $" + str(a1),
-            "Locked in and made $" + str(a1) + " today",
-            "Discipline plus Evalon equals profit",
-            "$" + str(a1) + " just from following instructions",
-            "Today was effortless. $" + str(a1),
-            "I keep making money here",
-            "Another day another profit. $" + str(a1),
-            "Evalon never lets me down",
-            "Accuracy was top tier today",
-            "Boss session was on fire",
-            "$" + str(a1) + " and I did not even stress once",
-            "Every call was right. $" + str(a1) + " profit",
-            "$" + str(a1) + " added to the account today",
-            "Followed blindly and made $" + str(a1) + ". Trust the process",
-            "My best session yet. $" + str(a1) + " profit",
-            "Woke up and the signals delivered. $" + str(a1),
-            "Zero losses today. $" + str(a1) + " secured",
-            "$" + str(a1) + " in under 2 hours. This is crazy",
-            "I stopped doubting and started earning. $" + str(a1),
-            "Ran every signal and walked away $" + str(a1) + " richer",
-            "Back to back wins today. $" + str(a1) + " total",
+        a1 = get_unique_amount(SMALL_AMOUNTS + MEDIUM_AMOUNTS)
+        a2 = get_unique_amount(LARGE_AMOUNTS + XLARGE_AMOUNTS)
+        _SHORT = [
+            f"Boss signals were clean today",
+            f"King you never disappoint",
+            f"Brother every single one hit today",
+            f"All {wins} won. Not even joking",
+            f"${a1} made just today. Thank you",
+            f"On point as always bro",
+            f"${a1} profit. Simple and clean",
+            f"Boss you delivered today",
+            f"Clean session from start to finish",
+            f"Evalon never misses",
+            f"This thing is real king",
+            f"Every signal landed today",
+            f"${a1} richer after this session",
+            f"Accuracy {acc_pct}% today. Unreal",
+            f"Never seen this kind of accuracy before",
+            f"${a1} in the bag today",
+            f"Evalon hits different every time",
+            f"Signals on point. ${a1} profit",
+            f"Every trade hit today king",
+            f"Was ready and it paid off. ${a1}",
+            f"No cap {acc_pct}% accuracy today",
+            f"Not one loss today",
+            f"Consistency is the key here king",
+            f"Session was perfect today",
+            f"Every entry was spot on",
+            f"${a1} made. Follow the signal and profit",
+            f"This accuracy is something else. ${a1}",
+            f"Followed every signal. ${a1} in profit",
+            f"Another solid session king",
+            f"${a1} secured. Thank you",
+            f"Results speak for themselves today",
+            f"King you are too consistent",
+            f"Profit again today. ${a1} clean",
+            f"Session was fire today",
+            f"This is why I renewed my VIP. ${a1}",
+            f"Locked in and made ${a1} today",
+            f"Discipline plus Evalon equals profit",
+            f"${a1} just from following instructions",
+            f"Today was effortless. ${a1}",
+            f"Bro I keep making money here",
+            f"Another day another profit. ${a1}",
+            f"Evalon never lets me down",
+            f"${a1} is a good day for me",
+            f"Accuracy was top tier today",
+            f"Boss session was on fire",
         ]
-        LONG = [
-            "I have been trading for 2 years and never seen accuracy like this. Made $" + str(a2) + " today just following the signals. Every single one hit. King you are built different",
-            "I was skeptical at first but " + acc_str + " signals won and I made $" + str(a2) + ". This is the real deal. No more guessing",
-            "I told my friend about Evalon after making $" + str(a2) + " today. He did not believe me so I showed him my account. Now he wants to join. Accuracy was " + str(acc_pct) + "%",
-            "I nearly gave up trading last month after losing elsewhere. Today I made $" + str(a2) + " and I finally feel confident again. Every signal was precise. Thank you for real",
-            "The consistency is what gets me every time. Session after session " + str(acc_pct) + "% accuracy. Made $" + str(a2) + " today and I am not even using big amounts yet",
-            "I screenshotted my balance after today. $" + str(a2) + " in profit. Evalon is changing lives for real",
-            str(acc_pct) + "% accuracy today. I have tried 3 other signal groups before. None come close to this. $" + str(a2) + " profit and I am happy",
-            "This is the most consistent signal I have ever followed. Today " + acc_str + " won and I made $" + str(a2) + ". My trading changed completely since I joined",
-            "I used to trade randomly and lose. Now I just wait for the signal and follow it. $" + str(a2) + " profit today. Discipline is key",
-            "I joined last week and already made back what I lost in 3 months elsewhere. $" + str(a2) + " today with " + str(acc_pct) + "% accuracy. Evalon is built different",
-            "I follow every signal without hesitation now. Today " + acc_str + " won and I cleared $" + str(a2) + ". Trust the process and it pays every time",
-            "Started with small amounts just to test. After $" + str(a2) + " profit today I am going bigger next session. King you never miss",
-            "My brother recommended Evalon and I thought it was just another group. After today making $" + str(a2) + " with " + str(acc_pct) + "% accuracy I am a believer",
-            "Three months with Evalon and I have not had a bad week yet. Today alone $" + str(a2) + " profit with " + str(acc_pct) + "% accuracy. King keep it up",
-            "People ask me where I get my signals from. I just smile and stay quiet. $" + str(a2) + " today says everything",
-            "I used to overthink every trade. Now I just wait for the signal open and close. $" + str(a2) + " made today with zero stress",
-            "Evalon taught me patience pays. Waited for each signal today and made $" + str(a2) + ". Every entry was clean",
-            "My account has grown every single week since joining. Today " + str(acc_pct) + "% accuracy and $" + str(a2) + ". This is sustainable trading",
-            "I show my daily profits to my family now. $" + str(a2) + " just from following signals. They stopped doubting me",
-            "I wake up ready because I know the signals are coming. $" + str(a2) + " today. Best decision I made joining this group",
-            "I have referred 4 people to this group already. After making $" + str(a2) + " today they all want in. The accuracy speaks for itself",
-            "I lost a lot of money before finding Evalon. Today $" + str(a2) + " profit and I am finally recovering. This group is different from everything else out there",
-            "Six sessions this month and every single one was profitable. Today $" + str(a2) + ". I do not even look for other signals anymore",
-            "I tested this with a small account first. After seeing " + str(acc_pct) + "% accuracy and $" + str(a2) + " today I moved serious money in. This is legit",
+        _LONG = [
+            f"I have been trading for 2 years and never seen accuracy like this. Made ${a2} today just following the signals. Every single one hit. King you are built different",
+            f"I was skeptical at first. But {acc_str} signals won today and I made ${a2}. This is the real deal. No more guessing",
+            f"I told my friend about this after making ${a2} today. He did not believe me so I showed him my account. Now he wants to join too. Accuracy was {acc_pct}%",
+            f"I nearly gave up trading last month after losing elsewhere. Today I made ${a2} and I finally feel confident again. Every signal was precise. Thank you for real",
+            f"The consistency is what gets me every time. Session after session {acc_pct}% accuracy. Made ${a2} today and I am not even using big amounts yet",
+            f"I screenshotted my balance after today. ${a2} in profit. Evalon is changing lives for real",
+            f"{acc_pct}% accuracy today. I have tried 3 other signal groups before. None of them come close to this. ${a2} profit and I am happy",
+            f"This is the most consistent signal I have ever followed. Today {acc_str} won and I made ${a2}. My trading changed completely since I joined",
+            f"I used to trade randomly and lose. Now I just wait for the signal and follow it. ${a2} profit today. Discipline is key",
+            f"I joined last week and already made back what I lost in 3 months elsewhere. Today was {acc_pct}% accuracy and ${a2} profit. Evalon is built different",
+            f"I follow every signal without hesitation now. Today {acc_str} won and I cleared ${a2}. Trust the process and it pays every time",
+            f"Started with small amounts just to test. After today {acc_pct}% accuracy and ${a2} profit I am going bigger next session. King you never miss",
+            f"My brother recommended Evalon and I thought it was just another group. After today making ${a2} with {acc_pct}% accuracy I am a believer. This is different",
+            f"I wake up ready because I know the signals are coming. Today {acc_str} hit and I walked away with ${a2}. Best decision I made joining this group",
+            f"Three months with Evalon and I have not had a bad week yet. Today alone ${a2} profit with {acc_pct}% accuracy. King keep it up",
+            f"People ask me where I get my signals from. I just smile and stay quiet. ${a2} today says everything",
+            f"I used to overthink every trade. Now I just wait for the signal open and close. ${a2} made today with zero stress",
+            f"Evalon taught me patience pays. Waited for each signal today and made ${a2}. Every entry was clean",
+            f"My account has grown every single week since joining. Today {acc_pct}% accuracy and ${a2} profit. This is sustainable trading",
+            f"I show my daily profits to my family now. Today ${a2} just from following signals. They stopped doubting me",
         ]
-        pool = SHORT * 3 + LONG
+        pool = _SHORT * 3 + _LONG
         random.shuffle(pool)
         for c in pool:
-            key = c[:35]
+            key = c[:40]
             if key not in used_comments:
-                used_comments.add(key); return c
-        return random.choice(LONG)
-
-    def joined_comment(idx):
-        a = get_amt(SMALL + MEDIUM)
-        opts = [
-            "First session here and already " + str(wins) + " out of " + str(total) + " won. This is unbelievable",
-            "Joined today. Already made $" + str(a) + " just following the signals. No joke",
-            "Just joined and first session " + str(acc_pct) + "% accuracy. Why did I wait so long",
-            "Brand new here and already profiting. $" + str(a) + " today. This group is real",
-        ]
-        return opts[idx % len(opts)]
+                used_comments.add(key)
+                return c
+        return random.choice(_LONG)
 
     used_nums = set()
     def get_num():
@@ -2391,31 +2401,34 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return {
             "num":     get_num(),
             "name":    _make_global_name(used_names),
-            "stars":   "\u2b50" * random.choice([5,5,5,4,4,5,4,5,5,4,5,4,5,3,4,5]),
+            "stars":   "\u2b50" * random.choice([5,5,5,4,4,4,5,4,3,5,4,5,4,5,3,4,5,5,4,5]),
             "comment": comment or win_comment()
         }
 
-    # Real feedback from DB - NO approval needed, include all with rating >= 3
+    # Real feedback - no approval needed, show all with rating >= 3
+    real_all = [f for f in load_feedback() if f.get("rating", 0) >= 3 and f.get("comment", "").strip()]
     real_entries = [{
         "num":     get_num(),
         "name":    f.get("name", "User"),
         "stars":   "\u2b50" * f.get("rating", 5),
         "comment": f.get("comment", "Great signals!")
-    } for f in load_feedback() if f.get("rating", 0) >= 3 and f.get("comment", "").strip()]
+    } for f in real_all]
 
-    total_fake = random.randint(25, 32)
-    joined_pos = sorted(random.sample(range(total_fake), min(2, total_fake)))
+    total_fake       = random.randint(25, 32)
+    joined_positions = sorted(random.sample(range(total_fake), 2))
     fake_entries = []
-    ji = 0
+    joined_idx = 0
     for i in range(total_fake):
-        if ji < len(joined_pos) and i == joined_pos[ji]:
-            fake_entries.append(make_fake(comment=joined_comment(ji))); ji += 1
+        if joined_idx < 2 and i == joined_positions[joined_idx]:
+            fake_entries.append(make_fake(comment=JOINED_TODAY[joined_idx]))
+            joined_idx += 1
         else:
             fake_entries.append(make_fake())
 
     # ORDER: 3 fake first, then real interleaved with remaining fakes
-    first_fake = fake_entries[:3]
-    rest_fake  = fake_entries[3:]
+    first_count = 3
+    first_fake  = fake_entries[:first_count]
+    rest_fake   = fake_entries[first_count:]
     middle = []
     ri = 0
     num_real = len(real_entries)
@@ -2435,24 +2448,22 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     all_entries = first_fake + middle
     if not all_entries:
-        chat_id = update.effective_chat.id
-        await context.bot.send_message(chat_id=chat_id, text="\U0001f4ca No feedback yet."); return
+        await update.message.reply_text("\U0001f4ca No feedback yet."); return
 
-    chat_id = update.effective_chat.id
-    await context.bot.send_message(chat_id=chat_id, text="\U0001f4ca *Sending feedback...*", parse_mode="Markdown")
+    await update.message.reply_text("\U0001f4ca *Sending feedback...*", parse_mode="Markdown")
     for entry in all_entries:
         try:
             await context.bot.send_message(
-                chat_id=chat_id,
-                text=entry["stars"] + " *#" + str(entry["num"]) + "*\n\U0001f464 *" + entry["name"] + "*\n_\"" + entry["comment"] + "\"_",
+                chat_id=update.effective_chat.id,
+                text=entry["stars"]+" *#"+str(entry["num"])+"*\n\U0001f464 *"+entry["name"]+"*\n_\""+entry["comment"]+"\"_",
                 parse_mode="Markdown"
             )
         except Exception as e:
             logger.warning(f"Feedback send failed: {e}")
-        await asyncio.sleep(random.uniform(0.05, 0.12))
+        await asyncio.sleep(random.uniform(1.2, 2.8))
 
     await context.bot.send_message(
-        chat_id=chat_id,
+        chat_id=update.effective_chat.id,
         text="\u2705 *Done!*",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("\U0001f5d1\ufe0f Clear All Feedback", callback_data="clear_feedback")]])
