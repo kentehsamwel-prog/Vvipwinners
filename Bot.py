@@ -12,7 +12,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, timezone, timedelta
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
     MessageHandler, filters, ContextTypes
@@ -137,11 +137,10 @@ except ImportError:
 WATERMARK_TEXT = "@EvalonwinnersBot"
 
 def add_watermark(image_bytes: bytes, user_id: int = None) -> bytes:
-    """Add watermark to image. If user_id is provided, includes it so leaks can be traced."""
+    """Add watermark to image. Larger text, cyan/green color for visibility."""
     if not WATERMARK_ENABLED:
         return image_bytes
     try:
-        # Build watermark text \u2014 two lines if user_id given
         if user_id:
             wm_line1 = "@EvalonwinnersBot"
             wm_line2 = f"\U0001f511 ID: {user_id}"
@@ -153,10 +152,11 @@ def add_watermark(image_bytes: bytes, user_id: int = None) -> bytes:
         w, h = img.size
         overlay = Image.new("RGBA", img.size, (0,0,0,0))
         draw = ImageDraw.Draw(overlay)
-        font_size = max(20, w // 18)
+        # Larger font: w//12 (was w//18) to be clearly visible
+        font_size = max(32, w // 12)
         try:
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-            font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", max(14, font_size - 4))
+            font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", max(22, font_size - 6))
         except:
             font = ImageFont.load_default()
             font_small = font
@@ -170,23 +170,24 @@ def add_watermark(image_bytes: bytes, user_id: int = None) -> bytes:
         else:
             tw2 = th2 = 0
 
-        tile_w = max(tw1, tw2) + 24
-        tile_h = th1 + (th2 + 6 if wm_line2 else 0) + 16
+        tile_w = max(tw1, tw2) + 28
+        tile_h = th1 + (th2 + 8 if wm_line2 else 0) + 20
         ti = Image.new("RGBA", (tile_w, tile_h), (0, 0, 0, 0))
         td = ImageDraw.Draw(ti)
-        # Shadow then text for line 1
-        td.text((4, 4),   wm_line1, font=font, fill=(0, 0, 0, 130))
-        td.text((2, 2),   wm_line1, font=font, fill=(255, 255, 255, 185))
-        # Line 2 if present
+        # Dark shadow for contrast
+        td.text((5, 5),   wm_line1, font=font, fill=(0, 0, 0, 160))
+        # Cyan/teal color for line 1: (0, 230, 200) - visible on both dark and light backgrounds
+        td.text((2, 2),   wm_line1, font=font, fill=(0, 230, 200, 210))
         if wm_line2:
-            y2 = th1 + 8
-            td.text((4, y2 + 2), wm_line2, font=font_small, fill=(0, 0, 0, 130))
-            td.text((2, y2),     wm_line2, font=font_small, fill=(255, 255, 200, 185))
+            y2 = th1 + 10
+            td.text((5, y2 + 3), wm_line2, font=font_small, fill=(0, 0, 0, 160))
+            # Green color for line 2: (80, 255, 120)
+            td.text((2, y2),     wm_line2, font=font_small, fill=(80, 255, 120, 210))
 
         rot = ti.rotate(330, expand=True)
         rw, rh = rot.size
-        for y in range(-rh, h + rh, rh + 60):
-            for x in range(-rw, w + rw, rw + 40):
+        for y in range(-rh, h + rh, rh + 70):
+            for x in range(-rw, w + rw, rw + 50):
                 overlay.paste(rot, (x, y), rot)
 
         out = Image.alpha_composite(img, overlay).convert("RGB")
@@ -198,30 +199,37 @@ def add_watermark(image_bytes: bytes, user_id: int = None) -> bytes:
         logger.warning(f"Watermark failed: {e}")
         return image_bytes
 
-# ============================================================
-# VIDEO WATERMARK (ffmpeg)
-# ============================================================
+
 async def add_video_watermark(video_bytes: bytes, user_id=None) -> bytes:
     """Burn text watermark onto video using ffmpeg. Returns original bytes if ffmpeg fails."""
     try:
-        wm_line1 = "@EVALONWINNERSBOT"
-        wm_line2 = f"ID: {user_id}" if user_id else ""
-        wm_text  = f"{wm_line1}\\n{wm_line2}" if wm_line2 else wm_line1
+        wm_line1 = "@EvalonwinnersBot"
+        wm_line2 = f"ID:{user_id}" if user_id else ""
+        # Build watermark text - two lines if user_id given
+        if wm_line2:
+            wm_text = f"{wm_line1} | {wm_line2}"
+        else:
+            wm_text = wm_line1
 
         with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as fin:
             fin.write(video_bytes)
             in_path = fin.name
         out_path = in_path.replace(".mp4", "_wm.mp4")
 
-        # ffmpeg drawtext filter - tiled diagonal watermark
-        drawtext = (
-            f"drawtext=text='{wm_text}':"
-            f"fontsize=24:fontcolor=white@0.55:shadowcolor=black@0.55:shadowx=2:shadowy=2:"
-            f"x='mod(n*3\\,w)':y='mod(n*2\\,h)':enable=1,"
-            f"drawtext=text='{wm_text}':"
-            f"fontsize=24:fontcolor=white@0.55:shadowcolor=black@0.55:shadowx=2:shadowy=2:"
-            f"x='mod(n*3+w/2\\,w)':y='mod(n*2+h/2\\,h)':enable=1"
-        )
+        # ffmpeg drawtext filter - larger text, cyan color, static tiled watermark grid
+        # fontsize=42 (was 24), cyan color (0x00FFFF) for visibility on dark/light backgrounds
+        tile_x = ["w/6", "w/2", "5*w/6", "w/4", "3*w/4"]
+        tile_y = ["h/5", "h/3", "h/2", "2*h/3", "4*h/5"]
+        filters = []
+        for tx in tile_x:
+            for ty in tile_y:
+                filters.append(
+                    f"drawtext=text='{wm_text}':"
+                    f"fontsize=42:fontcolor=0x00FFFF@0.75:"
+                    f"shadowcolor=black@0.80:shadowx=3:shadowy=3:"
+                    f"x=({tx}-tw/2):y=({ty}-th/2):enable=1"
+                )
+        drawtext = ",".join(filters)
 
         cmd = [
             "ffmpeg", "-y", "-i", in_path,
@@ -734,8 +742,10 @@ async def send_to_list(context, uid_list, text=None, photo=None,
             elif sticker:
                 await context.bot.send_sticker(chat_id=uid, sticker=sticker, protect_content=True)
             elif text:
+                pm = parse_mode if parse_mode else None
+                kw = {"parse_mode": pm} if pm else {}
                 await context.bot.send_message(chat_id=uid, text=text,
-                    parse_mode=parse_mode, reply_markup=reply_markup, protect_content=True)
+                    reply_markup=reply_markup, protect_content=True, **kw)
             return True
         except Exception as e:
             logger.warning(f"Send failed {uid}: {e}"); return False
@@ -782,30 +792,43 @@ def kb_after_result():
 
 def kb_session_timing():
     return InlineKeyboardMarkup([[
-        InlineKeyboardButton("\u23f0 30 Minutes", callback_data="sess_30"),
-        InlineKeyboardButton("\u23f0 1 Hour",     callback_data="sess_60"),
+        InlineKeyboardButton("\u23f0 5 Minutes",  callback_data="sess_30"),
+        InlineKeyboardButton("\u23f0 30 Minutes", callback_data="sess_60"),
     ]])
 
 def kb_get_vip():
     return InlineKeyboardMarkup([[InlineKeyboardButton("\U0001f48e Get VIP Access", callback_data="enter_code")]])
 
 def kb_feedback(session_id):
-    return InlineKeyboardMarkup([[
-        InlineKeyboardButton("\u2b50", callback_data=f"fb_{session_id}_1"),
-        InlineKeyboardButton("\u2b50\u2b50", callback_data=f"fb_{session_id}_2"),
-        InlineKeyboardButton("\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id}_3"),
-        InlineKeyboardButton("\u2b50\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id}_4"),
-        InlineKeyboardButton("\u2b50\u2b50\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id}_5"),
-    ]])
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("\u2b50", callback_data=f"fb_{session_id}_1"),
+            InlineKeyboardButton("\u2b50\u2b50", callback_data=f"fb_{session_id}_2"),
+            InlineKeyboardButton("\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id}_3"),
+            InlineKeyboardButton("\u2b50\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id}_4"),
+            InlineKeyboardButton("\u2b50\u2b50\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id}_5"),
+        ],
+        [InlineKeyboardButton("\U0001f7e2 SESSION", callback_data="trigger_start")],
+    ])
 
 # FIX 1: admin /start \u2014 short panel + buttons
 def kb_admin_start():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("\u23f0 Session 30 min", callback_data="sess_30"),
-         InlineKeyboardButton("\u23f0 Session 1 hr",   callback_data="sess_60")],
+        [InlineKeyboardButton("\u23f0 Session 5 min",  callback_data="sess_30"),
+         InlineKeyboardButton("\u23f0 Session 30 min", callback_data="sess_60")],
         [InlineKeyboardButton("\U0001f3c1 End Session",    callback_data="end_session")],
         [InlineKeyboardButton("\u2753 Help",            callback_data="admin_help")],
     ])
+
+# ============================================================
+# SESSION reply keyboard - persistent bottom keyboard
+# ============================================================
+def kb_session():
+    return ReplyKeyboardMarkup(
+        [[KeyboardButton("SESSION")]],
+        resize_keyboard=True,
+        persistent=True
+    )
 
 # ============================================================
 # /start
@@ -824,6 +847,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"\u26a1 *EVALON VIP SIGNALS*\n\U0001f4be {db_type}    \U0001f464 Total VIP Members: *{display}*",
             parse_mode="Markdown", reply_markup=kb_admin_start()
         )
+        await update.message.reply_text("\U0001f7e2", reply_markup=kb_session())
         return
 
     chat_id = update.effective_chat.id
@@ -832,7 +856,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_weekend():
         if is_vip(uid):
             msg = _random.choice(WEEKEND_VIP_MSGS).format(name=name, day=day)
-            await update.message.reply_text(msg, parse_mode="Markdown", protect_content=True)
+            await update.message.reply_text(msg, parse_mode="Markdown", protect_content=True, reply_markup=kb_session())
         else:
             msg = _random.choice(WEEKEND_NOVIP_MSGS).format(name=name, day=day, link=INVITE_LINK)
             await update.message.reply_text(
@@ -844,6 +868,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("\U0001f511 Get VIP Access", callback_data="enter_code")],
                 ])
             )
+            await update.message.reply_text("\U0001f7e2", reply_markup=kb_session())
         return
 
     u = get_user(uid)
@@ -874,6 +899,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="\U0001f446 *Watch how our VIP bot works!*\n\nSee exactly what you will receive as a VIP member. \U0001f3af",
             parse_mode="Markdown", protect_content=True
         )
+        await context.bot.send_message(chat_id=chat_id, text="\U0001f7e2", reply_markup=kb_session())
         return
 
     if not is_vip(uid):
@@ -902,6 +928,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="\U0001f446 *Watch how our VIP bot works!*\n\nGet your VIP code today and start receiving signals! \U0001f680",
             parse_mode="Markdown", protect_content=True
         )
+        await context.bot.send_message(chat_id=chat_id, text="\U0001f7e2", reply_markup=kb_session())
         return
 
     mday = "\U0001f7e2 Market Open" if is_market_day() else "\U0001f534 Weekend \u2014 signals resume Monday."
@@ -929,6 +956,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption="\U0001f446 *How to use your VIP signals!*\n\nFollow every signal exactly as shown. Good luck! \U0001f3af",
         parse_mode="Markdown", protect_content=True
     )
+    await context.bot.send_message(chat_id=chat_id, text="\U0001f7e2", reply_markup=kb_session())
 
 
 # ============================================================
@@ -1039,7 +1067,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         SESSION_LOG.clear()
         FULL_SESSION_LOG.clear()
         SESSION_STATS["start_time"] = time.time()
-        mins     = 30 if data == "sess_30" else 60
+        mins     = 5 if data == "sess_30" else 30
         vip_ids  = get_vip_ids()
         novip_ids= get_novip_ids()
         await send_to_list(context, vip_ids, text=msg_session_soon(mins, is_vip=True))
@@ -1109,7 +1137,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Record session end in full log
         FULL_SESSION_LOG.append({"type": "sticker", "content": SESSION_CLOSE_STICKER})
         FULL_SESSION_LOG.append({"type": "text",    "content": text})
-        fb_text    = "\n\n------------------\n\U0001f4dd *Rate today's session:*\nTap a number (1 = poor, 5 = excellent)"
+        fb_text    = ("\n\n------------------\n\U0001f4dd *Rate today's session:*\n""Tap a number (1 = poor, 5 = excellent)\n\n""------------------\n""\U0001f916 *Auto-Copy Trades on Pocket Option?*\n""Want your trades copied automatically?\n""Contact admin to get set up: @EvalonwinnersBot")
         fb_kb      = kb_feedback(session_id)
         async def _send_session_end(vid):
             try: await context.bot.send_sticker(chat_id=vid, sticker=SESSION_CLOSE_STICKER, protect_content=True)
@@ -1136,6 +1164,8 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 [InlineKeyboardButton("\U0001f4e2 Send Results to Non-VIP",    callback_data="send_results_novip")],
                 [InlineKeyboardButton("\U0001f4ca View Feedback",              callback_data=f"view_fb_{session_id}")],
                 [InlineKeyboardButton("\U0001f4e2 Forward Stats to Channel",   callback_data=f"fwd_session_stats_{session_id}")],
+                [InlineKeyboardButton("\U0001f4dd Custom Broadcast to VIP",    callback_data="custom_broadcast_vip")],
+                [InlineKeyboardButton("\U0001f4dd Custom Broadcast to All",    callback_data="custom_broadcast_all")],
             ])
         )
         return
@@ -1226,10 +1256,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not novip_ids:
             await q.answer("No non-VIP members found.", show_alert=True)
             return
-        await q.edit_message_text(
-            f"\U0001f4e2 *Sending session replay to {len(novip_ids)} non-VIP members...*",
-            parse_mode="Markdown"
-        )
+        await q.answer(f"Sending replay to {len(novip_ids)} non-VIP members...", show_alert=False)
         for entry in SESSION_LOG:
             pair_r = entry["pair"]; exp_r = entry["expiry"]
             dir_r  = entry["direction"]; res_r = entry["result"]; cnt_r = entry["count"]
@@ -1495,6 +1522,11 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_feedback([])
         await q.edit_message_text("\U0001f5d1\ufe0f *All feedback cleared!*", parse_mode="Markdown"); return
 
+    if data == "clear_real_feedback":
+        if not is_admin(uid): return
+        save_feedback([])
+        await q.edit_message_text("\U0001f5d1\ufe0f *All real feedback cleared!*", parse_mode="Markdown"); return
+
     # /channelfeedback \u2014 toggle selection checkbox
     if data.startswith("cf_toggle_"):
         if not is_admin(uid): return
@@ -1528,7 +1560,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not selected:
             await q.answer("\u26a0\ufe0f No entries selected!", show_alert=True)
             return
-        await q.edit_message_text("\U0001f4e2 *Forwarding to channel...*", parse_mode="Markdown")
+        await q.answer("Forwarding to channel...", show_alert=False)
         count = 0
         for idx in sorted(selected):
             if idx >= len(entries): continue
@@ -1551,8 +1583,10 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.warning(f"cf channel send failed: {e}")
         context.user_data["cf_selected"] = set()
-        await q.edit_message_text(
-            f"\u2705 *Done! Forwarded {count} feedback(s) to channel.*",
+        # Send result as a new message so the selection buttons panel stays visible
+        await context.bot.send_message(
+            chat_id=chat,
+            text=f"\u2705 *Done! Forwarded {count} feedback(s) to channel.*",
             parse_mode="Markdown"
         )
         return
@@ -1621,6 +1655,28 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # Custom broadcast: admin types a message, sent to VIP or all
+    if data in ("custom_broadcast_vip", "custom_broadcast_all"):
+        if not is_admin(uid): return
+        context.user_data["awaiting_custom_broadcast"] = data
+        await context.bot.send_message(
+            chat_id=chat,
+            text=(
+                "\U0001f4dd *Custom Broadcast*\n\n"
+                "Type your message below.\n"
+                "It will be sent to *VIP only* if you tapped VIP, or *all members* if you tapped All.\n\n"
+                "Send /cancel to cancel."
+            ),
+            parse_mode="Markdown"
+        )
+        return
+
+    if data == "trigger_start":
+        # SESSION button - behave exactly like /start
+        fake_update = update
+        await start(fake_update, context)
+        return
+
     if data == "check_join":
         # Verify real membership or pending join request
         is_member = False
@@ -1687,6 +1743,11 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = update.effective_user.first_name or "Trader"
     text = update.message.text.strip()
 
+    # SESSION keyboard button - same as /start
+    if text == "SESSION":
+        await start(update, context)
+        return
+
     if update.message.forward_date and not is_admin(uid):
         try: await update.message.delete()
         except: pass
@@ -1698,6 +1759,30 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if is_admin(uid):
         if text == "/skip": context.user_data["fb_waiting"] = False; return
+
+        if text == "/cancel":
+            context.user_data.pop("awaiting_custom_broadcast", None)
+            context.user_data.pop("awaiting_emergency", None)
+            await update.message.reply_text("\u274c Cancelled.", parse_mode="Markdown")
+            return
+
+        if context.user_data.get("awaiting_custom_broadcast"):
+            mode = context.user_data.pop("awaiting_custom_broadcast")
+            if mode == "custom_broadcast_vip":
+                targets = get_vip_ids()
+                label = "VIP"
+            else:
+                targets = get_all_ids()
+                label = "All"
+            if not targets:
+                await update.message.reply_text("\u26a0\ufe0f No members found.", parse_mode="Markdown")
+                return
+            sent, failed = await send_to_list(context, targets, text=text, parse_mode=None)
+            await update.message.reply_text(
+                f"\u2705 *Broadcast sent!*\n\n\U0001f465 {label}: \u2705 *{sent}* sent | \u274c *{failed}* failed",
+                parse_mode="Markdown"
+            )
+            return
 
         if context.user_data.get("awaiting_emergency"):
             context.user_data["awaiting_emergency"] = False
@@ -2030,7 +2115,19 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(uid): return
     args    = context.args or []
     to_all  = args and args[0].lower() == "all"
-    caption = " ".join(args[1:]) if to_all else " ".join(args)
+    # Preserve full text including newlines - extract from raw message text
+    raw_text = update.message.text or ""
+    cmd_end  = raw_text.find(" ", 1)  # skip /broadcast
+    if cmd_end == -1:
+        caption = ""
+    else:
+        rest = raw_text[cmd_end+1:]
+        if to_all:
+            # skip the "all" keyword
+            all_end = rest.find(" ")
+            caption = rest[all_end+1:] if all_end != -1 else ""
+        else:
+            caption = rest
     replied = update.message.reply_to_message
     targets = get_all_ids() if to_all else get_vip_ids()
     if not targets: await update.message.reply_text("\u26a0\ufe0f No users yet."); return
@@ -2063,7 +2160,8 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif replied.animation: sent, _ = await send_to_list(context, targets, animation=replied.animation.file_id, caption=replied.caption or caption or None)
         else: sent, _ = await send_to_list(context, targets, text=replied.text or caption)
     elif caption:
-        sent, _ = await send_to_list(context, targets, text=caption, parse_mode="Markdown")
+        # send as plain text to preserve exact formatting/newlines
+        sent, _ = await send_to_list(context, targets, text=caption, parse_mode=None)
     else:
         await update.message.reply_text(
             "\U0001f4e2 *Broadcast:*\n`/broadcast text` \u2192 VIP\n`/broadcast all text` \u2192 Everyone\nOr reply to media.",
@@ -2085,7 +2183,14 @@ async def end_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     vip_ids    = get_vip_ids()
     text       = msg_session_end(SESSION_STATS["wins"], SESSION_STATS["losses"])
     session_id = str(int(time.time()))
-    fb_text    = "\n\n------------------\n\U0001f4dd *Rate today's session:*\nTap a number (1 = poor, 5 = excellent)"
+    fb_text    = (
+        "\n\n------------------\n\U0001f4dd *Rate today's session:*\n"
+        "Tap a number (1 = poor, 5 = excellent)\n\n"
+        "------------------\n"
+        "\U0001f916 *Auto-Copy Trades on Pocket Option?*\n"
+        "Want your trades copied automatically?\n"
+        "Contact admin to get set up."
+    )
     # FIX 4: VIP only
     for vid in vip_ids:
         try: await context.bot.send_message(chat_id=vid, text=text+fb_text,
@@ -2098,154 +2203,178 @@ async def end_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("\U0001f4ca View Feedback", callback_data=f"view_fb_{session_id}")]]))
 
 # ============================================================
-# /feedback \u2014 FIX 2: hide real/generated label
+# GLOBAL NAME POOL - diverse names from all regions
+# ============================================================
+_GLOBAL_NAMES = [
+    "James","Ali","Sarah","Mike","John","David","Kevin","Chris","Tony","Eric",
+    "Omar","Hassan","Sam","Felix","Joel","Musa","Bilal","Zara","Aisha","Fatima",
+    "Nina","Grace","Nadia","Victor","Patrick","Raymond","George","Simon","Thomas",
+    "Nathan","Daniel","Andrew","Marcus","Leon","Paul","Rita","Diana","Sandra",
+    "Julia","Helen","Vera","Cindy","Monica","Irene","Ruth","Ivan","Bruno",
+    "Khalid","Yusuf","Hamza","Samir","Nour","Layla","Mariam","Rania",
+    "Amira","Kareem","Walid","Faris","Ziad","Hana","Sana","Rana","Dina","Lina",
+    "Ahmad","Mohammed","Abdullah","Ibrahim","Mustafa","Yasmin","Salma","Heba",
+    "Raj","Arjun","Vikram","Rohan","Priya","Ananya","Kavya","Rahul","Amit","Sanjay",
+    "Ravi","Deepak","Suresh","Naveen","Kiran","Pooja","Neha","Asha","Meera","Divya",
+    "Imran","Faisal","Usman","Ayesha","Zainab","Hira","Sadia","Farid",
+    "Adeel","Shahid","Junaid","Rizwan","Asma","Saira","Waqar","Kamran",
+    "Budi","Andi","Dian","Sari","Rizky","Farhan","Nurul","Putri","Dewi","Agus",
+    "Hendra","Wahyu","Indra","Fitri","Rina","Yuli","Bayu","Fajar","Dito",
+    "Carlos","Miguel","Diego","Luis","Juan","Ana","Maria","Rosa","Elena","Sofia",
+    "Pedro","Rafael","Fernando","Gabriel","Valentina","Isabella","Camila","Lucia",
+    "Alexei","Dmitri","Sergei","Pavel","Natasha","Olga","Viktor","Andrei",
+    "Wei","Jing","Xiao","Ming","Ling","Chen","Jin","Park","Kim",
+    "Kofi","Kwame","Ama","Yaw","Kwesi","Adwoa","Kojo","Akosua",
+    "Chidi","Emeka","Ngozi","Ike","Adaeze","Tunde","Bisi","Femi","Yemi","Sola",
+    "Tendai","Chipo","Farai","Tatenda","Rudo","Simba","Tariro",
+]
+_LAST_INITIALS = list("ABCDEFGHJKLMNOPRSTWY")
+
+def _make_global_name(used):
+    import random as _r
+    for _ in range(40):
+        base = _r.choice(_GLOBAL_NAMES)
+        first = base.split()[0]
+        full = (first + " " + _r.choice(_LAST_INITIALS)) if _r.random() < 0.40 else first
+        if full not in used:
+            used.add(full)
+            return full
+    return base.split()[0]
+
+# ============================================================
+# /feedback - real + fake mixed, no approval needed
 # ============================================================
 async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
-    import random
+    import random, time as _time
 
     wins    = SESSION_STATS.get("wins", 0)
     losses  = SESSION_STATS.get("losses", 0)
     total   = wins + losses
     acc_pct = int(wins/total*100) if total > 0 else 100
     acc_str = f"{wins}/{total}" if total > 0 else "all"
-    amt1    = random.randint(80, 500)
-    amt2    = random.randint(500, 4500)
-    amt2 = random.randint(500, 4500)
 
+    # Seed with time so every call produces different results
+    random.seed(_time.time())
 
+    # Amounts: majority 1000-10000, minority 200-900
+    SMALL  = [234,267,312,345,389,412,456,489,523,567,612,645,689,723,756,812,845,889,923,956]
+    LARGE  = [1023,1087,1134,1189,1234,1289,1345,1412,1478,1534,1589,1645,1712,1778,1834,1889,1945,2012,2089,2134]
+    XLARGE = [2234,2389,2512,2678,2834,2967,3123,3289,3456,3612,3789,3956,4123,4312,4478,4634,4812,4978,5134,5312]
+    HUGE   = [5567,5812,6134,6389,6623,6978,7234,7512,7823,8134,8456,8712,8967,9234,9512,9789,10123,10456,10789,11234]
+    # Weight: 10% small, 35% large, 35% xlarge, 20% huge
+    ALL_A  = SMALL*2 + LARGE*7 + XLARGE*7 + HUGE*4
+    used_a = set()
 
-    NAMES = [
-        "James","Ali","Sarah","Mike","John","David","Kevin","Chris","Tony","Eric",
-        "Omar","Hassan","Sam","Felix","Ivan","Bruno","Joel","Musa","Bilal","Zara",
-        "Aisha","Fatima","Nina","Emma","Lisa","Anna","Grace","Nadia","Victor","Patrick",
-        "Raymond","George","Simon","Thomas","Nathan","Daniel","Andrew","Marcus","Leon","Paul",
-        "Rita","Diana","Sandra","Julia","Helen","Vera","Cindy","Monica","Irene","Ruth",
-        "John K","Ali B","Sarah M","David T","Mike O","James K","Chris A","Eric B",
-        "Tony M","Omar A","Sam L","Felix K","Ivan D","Bruno T","Joel R","Musa H",
-    ]
-
-    _jamt1 = random.choice([134, 178, 203, 251, 287, 312, 356, 389, 423, 467])
-    _jamt2 = random.choice([512, 578, 634, 689, 743, 812, 867, 923, 978, 1043])
-    JOINED_TODAY = [
-        f"First session here and already {wins} out of {total} won. This is unbelievable",
-        f"Joined today. Already made ${_jamt1} just following the signals. No joke",
-    ]
-
-    # Amount pools - wide variety so each person has different amount
-    SMALL_AMOUNTS  = [87, 112, 134, 156, 178, 195, 203, 217, 234, 251, 263, 278, 291, 305, 318, 332, 347, 361, 374, 389]
-    MEDIUM_AMOUNTS = [412, 438, 456, 473, 491, 508, 524, 537, 562, 578, 591, 614, 627, 643, 658, 671, 689, 703, 724, 746]
-    LARGE_AMOUNTS  = [812, 847, 873, 916, 954, 978, 1043, 1087, 1134, 1178, 1215, 1267, 1312, 1389, 1423, 1478, 1534, 1612, 1689, 1743]
-    XLARGE_AMOUNTS = [1823, 1956, 2134, 2287, 2413, 2567, 2734, 2891, 3124, 3356, 3578, 3812, 4123, 4389, 4612, 4834, 5123, 5478, 5812, 6234, 6578, 6891, 7124]
-    ALL_AMOUNTS = SMALL_AMOUNTS + MEDIUM_AMOUNTS + LARGE_AMOUNTS + XLARGE_AMOUNTS
-    used_amounts = set()
-
-    def get_unique_amount(pool=None):
-        """Get a unique amount not used before in this session."""
-        src = pool if pool else ALL_AMOUNTS
-        available = [a for a in src if a not in used_amounts]
-        if not available:
-            available = src  # reset if exhausted
-        amt = random.choice(available)
-        used_amounts.add(amt)
-        return amt
+    def get_amt(pool=None):
+        src = pool or ALL_A
+        avail = [a for a in src if a not in used_a]
+        if not avail: avail = src
+        a = random.choice(avail); used_a.add(a); return a
 
     used_comments = set()
     def win_comment():
-        # Generate fresh unique amounts for THIS comment
-        a1 = get_unique_amount(SMALL_AMOUNTS + MEDIUM_AMOUNTS)
-        a2 = get_unique_amount(LARGE_AMOUNTS + XLARGE_AMOUNTS)
-        # Rebuild SHORT and LONG with fresh amounts
-        _SHORT = [
-            f"Boss signals were clean today",
-            f"King you never disappoint",
-            f"Brother every single one hit today",
-            f"All {wins} won. Not even joking",
-            f"${a1} made just today. Thank you",
-            f"On point as always bro",
-            f"${a1} profit. Simple and clean",
-            f"Boss you delivered today",
-            f"Clean session from start to finish",
-            f"Evalon never misses",
-            f"This thing is real king",
-            f"Every signal landed today",
-            f"${a1} richer after this session",
-            f"Accuracy {acc_pct}% today. Unreal",
-            f"Bro {wins} out of {total}. Impressive",
-            f"Never seen this kind of accuracy before",
-            f"${a1} in the bag today",
-            f"Evalon hits different every time",
-            f"Signals on point. ${a1} profit",
-            f"Every trade hit today king",
-            f"Was ready and it paid off. ${a1}",
-            f"No cap {acc_pct}% accuracy today",
-            f"Not one loss today",
-            f"${a1} and the session is still fresh",
-            f"Consistency is the key here king",
-            f"Session was perfect today",
-            f"Every entry was spot on",
-            f"${a1} made. Follow the signal and profit",
-            f"This accuracy is something else. ${a1}",
-            f"Followed every signal. ${a1} in profit",
-            f"Another solid session king",
-            f"Bro {acc_pct}% is no joke today",
-            f"${a1} secured. Thank you",
-            f"Results speak for themselves today",
-            f"King you are too consistent",
-            f"Profit again today. ${a1} clean",
-            f"Session was fire today",
-            f"Every signal confirmed. ${a1}",
-            f"This is why I renewed my VIP. ${a1}",
-            f"Locked in and made ${a1} today",
-            f"Discipline plus Evalon equals profit",
-            f"${a1} just from following instructions",
-            f"Today was effortless. ${a1}",
-            f"Bro I keep making money here",
-            f"King I appreciate the consistency",
-            f"Another day another profit. ${a1}",
-            f"Evalon never lets me down",
-            f"${a1} is a good day for me",
-            f"Accuracy was top tier today",
-            f"Boss session was on fire",
+        a1 = get_amt()
+        a2 = get_amt(LARGE + XLARGE + HUGE)
+        SHORT = [
+            "Boss signals were clean today",
+            "King you never disappoint",
+            "Brother every single one hit today",
+            "All " + str(wins) + " won. Not even joking",
+            "$" + str(a1) + " made just today. Thank you",
+            "On point as always bro",
+            "$" + str(a1) + " profit. Simple and clean",
+            "Boss you delivered today",
+            "Clean session from start to finish",
+            "Evalon never misses",
+            "Every signal landed today",
+            "$" + str(a1) + " richer after this session",
+            "Accuracy " + str(acc_pct) + "% today. Unreal",
+            "Never seen this kind of accuracy before",
+            "$" + str(a1) + " in the bag today",
+            "Evalon hits different every time",
+            "Signals on point. $" + str(a1) + " profit",
+            "Every trade hit today king",
+            "Was ready and it paid off. $" + str(a1),
+            "No cap " + str(acc_pct) + "% accuracy today",
+            "Not one loss today",
+            "Consistency is the key here king",
+            "Session was perfect today",
+            "Every entry was spot on",
+            "$" + str(a1) + " made. Follow the signal and profit",
+            "This accuracy is something else. $" + str(a1),
+            "Followed every signal. $" + str(a1) + " in profit",
+            "Another solid session king",
+            "$" + str(a1) + " secured. Thank you",
+            "Results speak for themselves today",
+            "King you are too consistent",
+            "Profit again. $" + str(a1) + " clean",
+            "Session was fire today",
+            "This is why I renewed my VIP. $" + str(a1),
+            "Locked in and made $" + str(a1) + " today",
+            "Discipline plus Evalon equals profit",
+            "$" + str(a1) + " just from following instructions",
+            "Today was effortless. $" + str(a1),
+            "I keep making money here",
+            "Another day another profit. $" + str(a1),
+            "Evalon never lets me down",
+            "Accuracy was top tier today",
+            "Boss session was on fire",
+            "$" + str(a1) + " and I did not even stress once",
+            "Every call was right. $" + str(a1) + " profit",
+            "$" + str(a1) + " added to the account today",
+            "Followed blindly and made $" + str(a1) + ". Trust the process",
+            "My best session yet. $" + str(a1) + " profit",
+            "Woke up and the signals delivered. $" + str(a1),
+            "Zero losses today. $" + str(a1) + " secured",
+            "$" + str(a1) + " in under 2 hours. This is crazy",
+            "I stopped doubting and started earning. $" + str(a1),
+            "Ran every signal and walked away $" + str(a1) + " richer",
+            "Back to back wins today. $" + str(a1) + " total",
         ]
-        _LONG = [
-            f"I have been trading for 2 years and never seen accuracy like this. Made ${a2} today just following the signals. Every single one hit. King you are built different",
-            f"I was skeptical at first. But {acc_str} signals won today and I made ${a1}. This is the real deal. No more guessing",
-            f"I told my friend about this after making ${a1} today. He did not believe me so I showed him my account. Now he wants to join too. Accuracy was {acc_pct}%",
-            f"I nearly gave up trading last month after losing elsewhere. Today I made ${a1} and I finally feel confident again. Every signal was precise. Thank you for real",
-            f"The consistency is what gets me every time. Session after session {acc_pct}% accuracy. Made ${a1} today and I am not even using big amounts yet",
-            f"I screenshotted my balance after today. ${a2} in profit. Evalon is changing lives for real",
-            f"{acc_pct}% accuracy today. I have tried 3 other signal groups before. None of them come close to this. ${a1} profit and I am happy",
-            f"This is the most consistent signal I have ever followed. Today {acc_str} won and I made ${a1}. My trading changed completely since I joined",
-            f"I used to trade randomly and lose. Now I just wait for the signal and follow it. ${a1} profit today. Discipline is key",
-            f"I joined last week and already made back what I lost in 3 months elsewhere. Today was {acc_pct}% accuracy and ${a1} profit. Evalon is built different",
-            f"I follow every signal without hesitation now. Today {acc_str} won and I cleared ${a1}. Trust the process and it pays every time",
-            f"Started with small amounts just to test. After today's {acc_pct}% accuracy and ${a1} profit I am going bigger next session. King you never miss",
-            f"My brother recommended Evalon and I thought it was just another group. After today making ${a1} with {acc_pct}% accuracy I am a believer. This is different",
-            f"I wake up ready because I know the signals are coming. Today {acc_str} hit and I walked away with ${a1}. Best decision I made joining this group",
-            f"Three months with Evalon and I have not had a bad week yet. Today alone ${a1} profit with {acc_pct}% accuracy. King keep it up",
-            f"People ask me where I get my signals from. I just smile and stay quiet. ${a2} today says everything",
-            f"I used to overthink every trade. Now I just wait for the signal open and close. ${a1} made today with zero stress",
-            f"Evalon taught me patience pays. Waited for each signal today and made ${a1}. Every entry was clean",
-            f"My account has grown every single week since joining. Today {acc_pct}% accuracy and ${a1} profit. This is sustainable trading",
-            f"I show my daily profits to my family now. Today ${a2} just from following signals. They stopped doubting me",
+        LONG = [
+            "I have been trading for 2 years and never seen accuracy like this. Made $" + str(a2) + " today just following the signals. Every single one hit. King you are built different",
+            "I was skeptical at first but " + acc_str + " signals won and I made $" + str(a2) + ". This is the real deal. No more guessing",
+            "I told my friend about Evalon after making $" + str(a2) + " today. He did not believe me so I showed him my account. Now he wants to join. Accuracy was " + str(acc_pct) + "%",
+            "I nearly gave up trading last month after losing elsewhere. Today I made $" + str(a2) + " and I finally feel confident again. Every signal was precise. Thank you for real",
+            "The consistency is what gets me every time. Session after session " + str(acc_pct) + "% accuracy. Made $" + str(a2) + " today and I am not even using big amounts yet",
+            "I screenshotted my balance after today. $" + str(a2) + " in profit. Evalon is changing lives for real",
+            str(acc_pct) + "% accuracy today. I have tried 3 other signal groups before. None come close to this. $" + str(a2) + " profit and I am happy",
+            "This is the most consistent signal I have ever followed. Today " + acc_str + " won and I made $" + str(a2) + ". My trading changed completely since I joined",
+            "I used to trade randomly and lose. Now I just wait for the signal and follow it. $" + str(a2) + " profit today. Discipline is key",
+            "I joined last week and already made back what I lost in 3 months elsewhere. $" + str(a2) + " today with " + str(acc_pct) + "% accuracy. Evalon is built different",
+            "I follow every signal without hesitation now. Today " + acc_str + " won and I cleared $" + str(a2) + ". Trust the process and it pays every time",
+            "Started with small amounts just to test. After $" + str(a2) + " profit today I am going bigger next session. King you never miss",
+            "My brother recommended Evalon and I thought it was just another group. After today making $" + str(a2) + " with " + str(acc_pct) + "% accuracy I am a believer",
+            "Three months with Evalon and I have not had a bad week yet. Today alone $" + str(a2) + " profit with " + str(acc_pct) + "% accuracy. King keep it up",
+            "People ask me where I get my signals from. I just smile and stay quiet. $" + str(a2) + " today says everything",
+            "I used to overthink every trade. Now I just wait for the signal open and close. $" + str(a2) + " made today with zero stress",
+            "Evalon taught me patience pays. Waited for each signal today and made $" + str(a2) + ". Every entry was clean",
+            "My account has grown every single week since joining. Today " + str(acc_pct) + "% accuracy and $" + str(a2) + ". This is sustainable trading",
+            "I show my daily profits to my family now. $" + str(a2) + " just from following signals. They stopped doubting me",
+            "I wake up ready because I know the signals are coming. $" + str(a2) + " today. Best decision I made joining this group",
+            "I have referred 4 people to this group already. After making $" + str(a2) + " today they all want in. The accuracy speaks for itself",
+            "I lost a lot of money before finding Evalon. Today $" + str(a2) + " profit and I am finally recovering. This group is different from everything else out there",
+            "Six sessions this month and every single one was profitable. Today $" + str(a2) + ". I do not even look for other signals anymore",
+            "I tested this with a small account first. After seeing " + str(acc_pct) + "% accuracy and $" + str(a2) + " today I moved serious money in. This is legit",
         ]
-        pool = _SHORT * 3 + _LONG
+        pool = SHORT * 3 + LONG
         random.shuffle(pool)
         for c in pool:
-            # 40% chance remove trailing emoji for variety
-            if random.random() < 0.4:
-                for em in ["\U0001f525","\U0001f4aa","\U0001f451","\U0001f3c6","\U0001f4b0","\U0001f3af","\U0001f631","\U0001f64f","\U0001f44a","\u2705","\U0001f48e","\u26a1","\U0001f44c"]:
-                    if c.endswith(em):
-                        c = c[:-len(em)].strip()
-                        break
-            # Avoid exact duplicates
-            key = c[:40]
+            key = c[:35]
             if key not in used_comments:
-                used_comments.add(key)
-                return c
-        # fallback if all used
-        return random.choice(_LONG)
+                used_comments.add(key); return c
+        return random.choice(LONG)
+
+    def joined_comment(idx):
+        a = get_amt(SMALL + MEDIUM)
+        opts = [
+            "First session here and already " + str(wins) + " out of " + str(total) + " won. This is unbelievable",
+            "Joined today. Already made $" + str(a) + " just following the signals. No joke",
+            "Just joined and first session " + str(acc_pct) + "% accuracy. Why did I wait so long",
+            "Brand new here and already profiting. $" + str(a) + " today. This group is real",
+        ]
+        return opts[idx % len(opts)]
 
     used_nums = set()
     def get_num():
@@ -2254,74 +2383,51 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         used_nums.add(n); return n
 
     used_names = set()
-    def make_name():
-        attempts = 0
-        while attempts < 20:
-            name = random.choice(NAMES)
-            if random.random() < 0.35:
-                second = random.choice([n for n in NAMES if n != name])
-                full = f"{name.split()[0]} {second.split()[0][0]}"
-            else:
-                full = name.split()[0]
-            if full not in used_names:
-                used_names.add(full)
-                return full
-            attempts += 1
-        return name.split()[0]
-
     def make_fake(comment=None):
         return {
             "num":     get_num(),
-            "name":    make_name(),
-            "stars":   "\u2b50" * random.choice([5,5,5,4,4,4,5,4,3,5,4,5,4,5,3,4,5,5,4,5]),
+            "name":    _make_global_name(used_names),
+            "stars":   "\u2b50" * random.choice([5,5,5,4,4,5,4,5,5,4,5,4,5,3,4,5]),
             "comment": comment or win_comment()
         }
 
-    # Real feedback from DB \u2014 only approved ones (max 4)
-    real_all  = [f for f in load_feedback() if f.get("rating", 0) >= 4 and f.get("approved", False)]
-    real_show = real_all[:4]
+    # Real feedback from DB - NO approval needed, include all with rating >= 3
     real_entries = [{
         "num":     get_num(),
         "name":    f.get("name", "User"),
         "stars":   "\u2b50" * f.get("rating", 5),
         "comment": f.get("comment", "Great signals!")
-    } for f in real_show]
+    } for f in load_feedback() if f.get("rating", 0) >= 3 and f.get("comment", "").strip()]
 
-    # Build fake pool \u2014 exactly 2 "joined today" spread out
-    total_fake       = random.randint(25, 32)
-    joined_pool      = list(JOINED_TODAY)  # already 2
-    joined_positions = sorted(random.sample(range(total_fake), 2))
-
+    total_fake = random.randint(25, 32)
+    joined_pos = sorted(random.sample(range(total_fake), min(2, total_fake)))
     fake_entries = []
-    joined_idx = 0
+    ji = 0
     for i in range(total_fake):
-        if joined_idx < 2 and i == joined_positions[joined_idx]:
-            fake_entries.append(make_fake(comment=joined_pool[joined_idx]))
-            joined_idx += 1
+        if ji < 2 and i == joined_pos[ji]:
+            fake_entries.append(make_fake(comment=joined_comment(ji))); ji += 1
         else:
             fake_entries.append(make_fake())
 
-    # ORDER: 2-3 fake FIRST, then interleave real with remaining fakes
-    first_count = random.randint(2, 3)
-    first_fake  = fake_entries[:first_count]
-    rest_fake   = fake_entries[first_count:]
-
-    # Interleave real with rest_fake naturally \u2014 real never first
+    # ORDER: 3 fake first, then real interleaved with remaining fakes
+    first_fake = fake_entries[:3]
+    rest_fake  = fake_entries[3:]
     middle = []
     ri = 0
-    # Space real entries evenly through the remaining fakes
-    gap = max(1, len(rest_fake) // (len(real_entries) + 1)) if real_entries else len(rest_fake)
-    next_real_at = gap  # first real appears after 'gap' fakes
-    fake_count_in_middle = 0
-    for fe in rest_fake:
-        if ri < len(real_entries) and fake_count_in_middle >= next_real_at:
+    num_real = len(real_entries)
+    if num_real > 0 and rest_fake:
+        gap = max(2, len(rest_fake) // (num_real + 1))
+        fc = 0
+        for fe in rest_fake:
+            middle.append(fe); fc += 1
+            if ri < num_real and fc % gap == 0:
+                middle.append(real_entries[ri]); ri += 1
+        while ri < num_real:
             middle.append(real_entries[ri]); ri += 1
-            next_real_at = fake_count_in_middle + gap
-        middle.append(fe)
-        fake_count_in_middle += 1
-    # Append any remaining real at the end (still after fakes)
-    while ri < len(real_entries):
-        middle.append(real_entries[ri]); ri += 1
+    else:
+        middle = rest_fake[:]
+        while ri < num_real:
+            middle.append(real_entries[ri]); ri += 1
 
     all_entries = first_fake + middle
     if not all_entries:
@@ -2332,7 +2438,7 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_message(
                 chat_id=update.effective_chat.id,
-                text=f"{entry['stars']} *#{entry['num']}*\n\U0001f464 *{entry['name']}*\n_\"{entry['comment']}\"_",
+                text=entry["stars"] + " *#" + str(entry["num"]) + "*\n\U0001f464 *" + entry["name"] + "*\n_\"" + entry["comment"] + "\"_",
                 parse_mode="Markdown"
             )
         except Exception as e:
@@ -2345,6 +2451,7 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("\U0001f5d1\ufe0f Clear All Feedback", callback_data="clear_feedback")]])
     )
+
 
 # ============================================================
 # /channelfeedback \u2014 feedback with checkboxes to forward selected to channel
@@ -2588,57 +2695,47 @@ async def cmd_reviewfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
 
 # ============================================================
-# /realfeedback / /realfeedbacks \u2014 see only real feedback with approval status
+# /realfeedback - show real feedback only + clear button
 # ============================================================
 async def cmd_realfeedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     fb_list = load_feedback()
     if not fb_list:
         await update.message.reply_text(
-            "\U0001f4ca *No real feedback yet.*\n\nFeedback will appear here after VIP members rate sessions.\nNo notifications will be sent to you \u2014 check here anytime.",
+            "\U0001f4ca *No real feedback yet.*\n\nFeedback appears here after VIP members rate sessions.",
             parse_mode="Markdown"
         ); return
 
-    pending  = [f for f in fb_list if f.get("pending", False)]
-    approved = [f for f in fb_list if f.get("approved", False)]
-    rejected = [f for f in fb_list if not f.get("pending", False) and not f.get("approved", False) and f.get("id")]
+    ratings = [f["rating"] for f in fb_list if "rating" in f]
+    avg     = sum(ratings)/len(ratings) if ratings else 0
+    await update.message.reply_text(
+        f"\U0001f4ca *REAL FEEDBACK \u2014 {len(fb_list)} total*\n\u2b50 Average: *{avg:.1f}/5*",
+        parse_mode="Markdown"
+    )
 
-    ratings  = [f["rating"] for f in fb_list]
-    avg      = sum(ratings)/len(ratings)
-    lines    = [
-        f"\U0001f4ca *REAL FEEDBACK \u2014 {len(fb_list)} total*\n"
-        f"\u2b50 Average: *{avg:.1f}/5*\n"
-        f"\u23f3 Pending: *{len(pending)}* | \u2705 Approved: *{len(approved)}* | \u274c Rejected: *{len(rejected)}*\n"
-        f"\U0001f515 _All feedback is saved silently \u2014 no admin notifications_\n\n"
-    ]
-
-    if pending:
-        lines.append("\u23f3 *PENDING APPROVAL:*\n")
-        for fb in pending:
-            stars = "\u2b50" * fb.get("rating", 0)
-            lines.append(
-                f"\U0001f511 `{fb.get('id','?')}` \u2014 *{fb.get('name','?')}* {stars}\n"
-                f"   \U0001f4ac _{fb.get('comment','No comment')}_\n"
-                f"   \U0001f4c5 {fb.get('date','?')}\n\n"
+    for fb in fb_list:
+        stars   = "\u2b50" * fb.get("rating", 0)
+        comment = fb.get("comment","No comment")
+        name    = fb.get("name","?")
+        date    = fb.get("date","")
+        try:
+            await context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=stars + "\n\U0001f464 *" + name + "*\n\U0001f4ac _" + comment + "_\n\U0001f4c5 " + date,
+                parse_mode="Markdown"
             )
+        except Exception as e:
+            logger.warning(f"realfeedback send failed: {e}")
+        await asyncio.sleep(0.3)
 
-    if approved:
-        lines.append("\u2705 *APPROVED:*\n")
-        for fb in approved:
-            stars = "\u2b50" * fb.get("rating", 0)
-            lines.append(f"\u2014 *{fb.get('name','?')}* {stars}: _{fb.get('comment','')}_\n")
-
-    if rejected:
-        lines.append("\u274c *REJECTED:*\n")
-        for fb in rejected:
-            stars = "\u2b50" * fb.get("rating", 0)
-            lines.append(f"\u2014 *{fb.get('name','?')}* {stars}: _{fb.get('comment','')}_\n")
-
-    full_text = "".join(lines)
-    # Split if too long
-    if len(full_text) > 4000:
-        full_text = full_text[:4000] + "\n\n_...more feedback available, use /reviewfeedback_"
-    await update.message.reply_text(full_text, parse_mode="Markdown")
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"\u2705 *{len(fb_list)} feedback(s) shown above.*",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("\U0001f5d1\ufe0f Clear ALL Real Feedback", callback_data="clear_real_feedback")
+        ]])
+    )
 
 # Alias
 async def cmd_realfeedbacks(update: Update, context: ContextTypes.DEFAULT_TYPE):
