@@ -2404,7 +2404,7 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fake_entries = []
     ji = 0
     for i in range(total_fake):
-        if ji < 2 and i == joined_pos[ji]:
+        if ji < len(joined_pos) and i == joined_pos[ji]:
             fake_entries.append(make_fake(comment=joined_comment(ji))); ji += 1
         else:
             fake_entries.append(make_fake())
@@ -2433,11 +2433,12 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not all_entries:
         await update.message.reply_text("\U0001f4ca No feedback yet."); return
 
-    await update.message.reply_text("\U0001f4ca *Sending feedback...*", parse_mode="Markdown")
+    chat_id = update.effective_chat.id
+    await context.bot.send_message(chat_id=chat_id, text="\U0001f4ca *Sending feedback...*", parse_mode="Markdown")
     for entry in all_entries:
         try:
             await context.bot.send_message(
-                chat_id=update.effective_chat.id,
+                chat_id=chat_id,
                 text=entry["stars"] + " *#" + str(entry["num"]) + "*\n\U0001f464 *" + entry["name"] + "*\n_\"" + entry["comment"] + "\"_",
                 parse_mode="Markdown"
             )
@@ -2446,7 +2447,7 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await asyncio.sleep(random.uniform(1.2, 2.8))
 
     await context.bot.send_message(
-        chat_id=update.effective_chat.id,
+        chat_id=chat_id,
         text="\u2705 *Done!*",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("\U0001f5d1\ufe0f Clear All Feedback", callback_data="clear_feedback")]])
@@ -2756,7 +2757,7 @@ async def _send_help(chat_id, context):
         "\U0001f4cd After signal: tap *BUY / SELL / Cancel*\n"
         "\u2705 After direction: tap *WIN / LOSS*\n\n"
         "--------------\n\U0001f4c5 *SESSION*\n--------------\n"
-        "`/session` \u2014 Send 30min or 1hr session alert to VIP\n"
+        "`/session` \u2014 Send 5min or 30min session alert to VIP\n"
         "  \u2514 Tap *Send Start Now* to begin session\n"
         "  \u2514 Tap *Emergency/Delay* to send urgent message\n"
         "`/end` \u2014 End session and send results to VIP\n\n"
@@ -2790,17 +2791,17 @@ async def _send_help(chat_id, context):
         "--------------\n\U0001f4ca *STATS & FEEDBACK*\n--------------\n"
         "`/stats` \u2014 Full stats: wins, losses, members, weekly\n"
         "`/dbstatus` \u2014 Check database health (PostgreSQL)\n"
-        "`/feedback` \u2014 Show feedback (fake + real) in sequence\n"
-        "`/channelfeedback` \u2014 Select feedback to forward to channel\n"
-        "`/reviewfeedback` \u2014 Approve or reject member feedback\n"
-        "`/realfeedback` \u2014 View all real feedback (no notification)\n"
-        "`/realfeedbacks` \u2014 Same as /realfeedback\n\n"
-        "\U0001f4a1 _Feedback is saved silently \u2014 no admin pings. Check /realfeedbacks anytime._\n\n"
+        "`/feedback` — Fake + real feedback mixed (no approval needed)\n"
+        "`/realfeedback` — View real feedback only + Clear button\n\n"
+        "\U0001f4a1 _Real feedback saved automatically after each session rating._\n\n"
+        "--------------\n\U0001f4e2 *CUSTOM BROADCAST*\n--------------\n"
+        "After `/end`, tap *Custom Broadcast to VIP* or *All*\n"
+        "Type message → sent exactly as written. `/cancel` to stop\n\n"
         "--------------\n\U0001f5bc *MEDIA & FILE IDs*\n--------------\n"
         "`/getid` \u2014 Send sticker/photo \u2192 get its file\\_id\n"
         "`/setwelcome` \u2014 Send photo \u2192 set as welcome image\n\n"
         "--------------\n\u2699\ufe0f *GENERAL*\n--------------\n"
-        "`/start` \u2014 Show welcome message (any user)\n"
+        "`/start` or tap *SESSION* button — Show welcome / status\n"
         "`/help` \u2014 Show this admin guide (admin only)\n"
     ))
 
