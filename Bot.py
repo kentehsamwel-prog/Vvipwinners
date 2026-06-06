@@ -826,8 +826,7 @@ def kb_admin_start():
 def kb_session():
     return ReplyKeyboardMarkup(
         [[KeyboardButton("SESSION")]],
-        resize_keyboard=True,
-        persistent=True
+        resize_keyboard=True
     )
 
 # ============================================================
@@ -847,7 +846,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"\u26a1 *EVALON VIP SIGNALS*\n\U0001f4be {db_type}    \U0001f464 Total VIP Members: *{display}*",
             parse_mode="Markdown", reply_markup=kb_admin_start()
         )
-        await update.message.reply_text("\U0001f7e2", reply_markup=kb_session())
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text="\u200b",
+            reply_markup=kb_session()
+        )
         return
 
     chat_id = update.effective_chat.id
@@ -856,7 +859,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_weekend():
         if is_vip(uid):
             msg = _random.choice(WEEKEND_VIP_MSGS).format(name=name, day=day)
-            await update.message.reply_text(msg, parse_mode="Markdown", protect_content=True, reply_markup=kb_session())
+            await update.message.reply_text(msg, parse_mode="Markdown", protect_content=True)
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="\u200b", reply_markup=kb_session())
         else:
             msg = _random.choice(WEEKEND_NOVIP_MSGS).format(name=name, day=day, link=INVITE_LINK)
             await update.message.reply_text(
@@ -868,7 +872,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [InlineKeyboardButton("\U0001f511 Get VIP Access", callback_data="enter_code")],
                 ])
             )
-            await update.message.reply_text("\U0001f7e2", reply_markup=kb_session())
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="\u200b", reply_markup=kb_session())
         return
 
     u = get_user(uid)
@@ -899,7 +903,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="\U0001f446 *Watch how our VIP bot works!*\n\nSee exactly what you will receive as a VIP member. \U0001f3af",
             parse_mode="Markdown", protect_content=True
         )
-        await context.bot.send_message(chat_id=chat_id, text="\U0001f7e2", reply_markup=kb_session())
+        await context.bot.send_message(chat_id=chat_id, text="\u200b", reply_markup=kb_session())
         return
 
     if not is_vip(uid):
@@ -928,7 +932,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption="\U0001f446 *Watch how our VIP bot works!*\n\nGet your VIP code today and start receiving signals! \U0001f680",
             parse_mode="Markdown", protect_content=True
         )
-        await context.bot.send_message(chat_id=chat_id, text="\U0001f7e2", reply_markup=kb_session())
+        await context.bot.send_message(chat_id=chat_id, text="\u200b", reply_markup=kb_session())
         return
 
     mday = "\U0001f7e2 Market Open" if is_market_day() else "\U0001f534 Weekend \u2014 signals resume Monday."
@@ -956,7 +960,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         caption="\U0001f446 *How to use your VIP signals!*\n\nFollow every signal exactly as shown. Good luck! \U0001f3af",
         parse_mode="Markdown", protect_content=True
     )
-    await context.bot.send_message(chat_id=chat_id, text="\U0001f7e2", reply_markup=kb_session())
+    await context.bot.send_message(chat_id=chat_id, text="\u200b", reply_markup=kb_session())
 
 
 # ============================================================
@@ -2431,7 +2435,8 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     all_entries = first_fake + middle
     if not all_entries:
-        await update.message.reply_text("\U0001f4ca No feedback yet."); return
+        chat_id = update.effective_chat.id
+        await context.bot.send_message(chat_id=chat_id, text="\U0001f4ca No feedback yet."); return
 
     chat_id = update.effective_chat.id
     await context.bot.send_message(chat_id=chat_id, text="\U0001f4ca *Sending feedback...*", parse_mode="Markdown")
@@ -2444,7 +2449,7 @@ async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         except Exception as e:
             logger.warning(f"Feedback send failed: {e}")
-        await asyncio.sleep(random.uniform(1.2, 2.8))
+        await asyncio.sleep(random.uniform(0.05, 0.12))
 
     await context.bot.send_message(
         chat_id=chat_id,
