@@ -1147,7 +1147,10 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except: pass
         await asyncio.gather(*[_send_session_end(vid) for vid in vip_ids])
         # Auto-send account management offer 5 minutes after session ends
-        context.job_queue.run_once(send_account_management_msg, when=300, name="acct_mgmt")
+        try:
+            if context.job_queue:
+                context.job_queue.run_once(send_account_management_msg, when=300, name="acct_mgmt")
+        except Exception as _je: logger.warning(f"job_queue run_once failed: {_je}")
         sigs = load_signals(); sigs[f"session_{session_id}"] = {"session_id": session_id}; save_signals(sigs)
         wins_end = SESSION_STATS["wins"]; losses_end = SESSION_STATS["losses"]
         total_end = wins_end + losses_end
@@ -2200,7 +2203,10 @@ async def end_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except: pass
     sigs = load_signals(); sigs[f"session_{session_id}"] = {"session_id": session_id}; save_signals(sigs)
     # Auto-send account management offer 5 minutes after session ends
-    context.job_queue.run_once(send_account_management_msg, when=300, name="acct_mgmt")
+    try:
+        if context.job_queue:
+            context.job_queue.run_once(send_account_management_msg, when=300, name="acct_mgmt")
+    except Exception as _je: logger.warning(f"job_queue run_once failed: {_je}")
     # FIX 7: clean message
     await update.message.reply_text("\U0001f3c1 *Session ended!*\n\nTap below to see feedback \U0001f447",
         parse_mode="Markdown",
@@ -3451,13 +3457,18 @@ def main():
     app.add_handler(MessageHandler(filters.ChatType.PRIVATE & (filters.PHOTO | filters.VIDEO | filters.ANIMATION), handle_media))
     app.add_handler(MessageHandler(filters.FORWARDED, protect_forward))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-    # Daily expiry check at 08:00 UTC
-    from datetime import time as dt_time
-    app.job_queue.run_daily(check_vip_expiry, time=dt_time(8, 0, 0))
-    # Weekly stats summary every Monday 09:00 UTC
-    app.job_queue.run_daily(send_weekly_stats_job, time=dt_time(9, 0, 0), days=(1,))
-    # Monthly stats: run daily but function checks if it's 1st of month
-    app.job_queue.run_daily(send_monthly_stats_job, time=dt_time(9, 0, 1), days=(1,2,3,4,5,6,7))
+    # Schedule daily jobs if job_queue is available
+    try:
+        from datetime import time as dt_time
+        if app.job_queue:
+            app.job_queue.run_daily(check_vip_expiry,        time=dt_time(8, 0, 0))
+            app.job_queue.run_daily(send_weekly_stats_job,   time=dt_time(9, 0, 0), days=(1,))
+            app.job_queue.run_daily(send_monthly_stats_job,  time=dt_time(9, 0, 1))
+            print("Job queue registered OK")
+        else:
+            print("WARNING: job_queue is None - APScheduler not installed")
+    except Exception as e:
+        print(f"WARNING: job_queue setup failed: {e}")
     print("Bot is running!")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
