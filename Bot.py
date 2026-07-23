@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-EVALON VIP SIGNALS BOT v12 - Full Code Update
+EVALON VIP SIGNALS BOT v13 - Full Code Restored (English Only)
 """
 
 import os, json, uuid, time, logging, asyncio, threading, urllib.request, tempfile
@@ -411,6 +411,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown", reply_markup=kb_support(), protect_content=True
     )
 
+async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid = update.effective_user.id
+    if not is_admin(uid):
+        return
+    
+    help_text = (
+        "🛠 *EVALON ADMIN HELP & COMMANDS* 🛠\n\n"
+        "1️⃣ *Send Signal:* Type e.g. `EURUSD 1` or `EURUSD 1 Your Note` and send it.\n"
+        "2️⃣ *Quick Direction:* Type **`sell sell`**, **`sell`**, **`buy buy`**, or **`buy`** while an active signal exists to broadcast it instantly!\n"
+        "3️⃣ `/users` - View the list of all users on the bot.\n"
+        "4️⃣ `/help` - Show this admin guide."
+    )
+    await update.message.reply_text(help_text, parse_mode="Markdown")
+
 async def _process_result(update, context, result, sig_id, query=None):
     signals   = load_signals()
     sig       = signals.get(sig_id, {}) if sig_id else {}
@@ -562,12 +576,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(msg[:4000], parse_mode="Markdown")
             return
 
-        # FEATURE 4: Direct text parser (mf. "sell sell" au "buy buy")
+        # Quick text parser for direct direction
         lower_t = text.lower()
         if lower_t in ("sell sell", "sell", "buy buy", "buy"):
             signals = load_signals()
             if not signals:
-                await update.message.reply_text("⚠️ Hakuna signal inayendelea (Active signal). Tafadhali tuma kwanza Pair na Expiry mfano: `EURUSD 1`", parse_mode="Markdown")
+                await update.message.reply_text("⚠️ No active signal found. Please send the Pair and Expiry first, e.g.: `EURUSD 1`", parse_mode="Markdown")
                 return
             
             sig_id = list(signals.keys())[-1]
@@ -594,7 +608,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try: await update.message.delete()
             except: pass
             
-            await context.bot.send_message(chat_id=uid, text=f"📈 *{direction}* imetumwa moja kwa moja kupitia neno *'{text}'*!\nChagua matokeo hapa chini 👇", parse_mode="Markdown", reply_markup=kb_result(sig_id))
+            await context.bot.send_message(chat_id=uid, text=f"📈 *{direction}* sent directly via text *'{text}'*!\nSelect result below 👇", parse_mode="Markdown", reply_markup=kb_result(sig_id))
             return
 
         is_universal = text.lower().startswith("/signal")
@@ -628,7 +642,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             signals[sig_id] = {"pair": pair, "expiry": expiry, "custom_txt": custom_txt, "msgs": sent_msgs}
             save_signals(signals)
 
-            await context.bot.send_message(chat_id=uid, text=f"✅ Signal broadcasted to *{len(target_ids)}* users!\nPair: {pair}\n\n*Au andika moja kwa moja 'buy' au 'sell' kutuma direction.*", parse_mode="Markdown", reply_markup=kb_direction(sig_id))
+            await context.bot.send_message(chat_id=uid, text=f"✅ Signal broadcasted to *{len(target_ids)}* users!\nPair: {pair}\n\n*Or type 'buy' / 'sell' directly to send direction.*", parse_mode="Markdown", reply_markup=kb_direction(sig_id))
             return
 
     if text.upper().startswith("VIP-"):
@@ -653,10 +667,11 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("signal", handle_text))
     application.add_handler(CommandHandler("users", handle_text))
+    application.add_handler(CommandHandler("help", admin_help))
     application.add_handler(CallbackQueryHandler(buttons))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
-    logger.info("Evalon Signals Bot v12 started successfully ✅")
+    logger.info("Evalon Signals Bot v13 started successfully ✅")
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
