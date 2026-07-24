@@ -13,6 +13,7 @@ from psycopg2.extras import RealDictCursor
 from datetime import datetime, timezone, timedelta
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+from telegram.error import Forbidden
 from telegram.ext import (
     Application, CommandHandler, CallbackQueryHandler,
     MessageHandler, filters, ContextTypes
@@ -499,6 +500,20 @@ def is_vip(uid):     return get_user(uid).get("vip", False)
 def get_vip_ids():   return [int(k) for k,v in load_db()["users"].items() if v.get("vip")]
 def get_all_ids():   return [int(k) for k in load_db()["users"]]
 def get_novip_ids(): return [int(k) for k,v in load_db()["users"].items() if not v.get("vip")]
+
+def mark_user_blocked(uid, blocked=True):
+    """Marks/unmarks a user as having blocked the bot. Called when a send raises Forbidden."""
+    db = load_db()
+    u = db["users"].get(str(uid))
+    if not u:
+        return
+    if blocked and not u.get("blocked"):
+        u["blocked"] = True
+        u["blocked_date"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        save_db(db)
+    elif not blocked and u.get("blocked"):
+        u["blocked"] = False
+        save_db(db)
 def get_vip_count(): return sum(1 for v in load_db()["users"].values() if v.get("vip"))
 
 # Display count = base (grows +1/day from 1500) + real VIP count
@@ -792,7 +807,11 @@ async def send_to_list(context, uid_list, text=None, photo=None,
                 kw = {"parse_mode": pm} if pm else {}
                 await context.bot.send_message(chat_id=uid, text=text,
                     reply_markup=reply_markup, protect_content=True, **kw)
+            mark_user_blocked(uid, False)
             return True
+        except Forbidden:
+            mark_user_blocked(uid, True)
+            return False
         except Exception as e:
             logger.warning(f"Send failed {uid}: {e}"); return False
 
@@ -1042,6 +1061,9 @@ async def _process_result(update, context, result, sig_id, count, query=None):
         try:
             await context.bot.send_message(chat_id=uidint, text=result_text,
                 parse_mode="Markdown", protect_content=True)
+            mark_user_blocked(uidint, False)
+        except Forbidden:
+            mark_user_blocked(uidint, True)
         except Exception as e: logger.warning(f"Result msg failed {uid_str}: {e}")
         if USE_STICKERS and sticker_id and "PASTE_" not in sticker_id:
             try:
@@ -1074,7 +1096,7 @@ async def _process_result(update, context, result, sig_id, count, query=None):
         f"\U0001f4ca PAIR      : *{pair}*\n"
         f"\u23f1 EXPIRY    : *{expiry} MIN*\n"
         f"\U0001f4c8 DIRECTION : *{direction}*\n"
-        f"{icon} RESULT    : *{result} {count*10}%*\n"
+        f"{icon} RESULT    : *{result} {weight}%*\n"
         "--------------\n\n"
         "\U0001f4ca *SESSION SO FAR:*\n"
         "--------------\n"
@@ -1435,6 +1457,9 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except: pass
             await asyncio.gather(*[_send_cancel(item) for item in msgs.items()])
             del signals[sig_id]; save_signals(signals)
+            # A cancelled signal never happened - free up its slot in the 5%/15% sequence
+            if SESSION_STATS.get("signal_count", 0) > 0:
+                SESSION_STATS["signal_count"] -= 1
             await q.edit_message_text(f"\u274c Signal *{pair}* cancelled.", parse_mode="Markdown")
             return
 
@@ -1447,7 +1472,11 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         async def _send_direction(uid_str):
             uidint = int(uid_str)
-            try: await context.bot.send_message(chat_id=uidint, text=direction_text, parse_mode="Markdown", protect_content=True)
+            try:
+                await context.bot.send_message(chat_id=uidint, text=direction_text, parse_mode="Markdown", protect_content=True)
+                mark_user_blocked(uidint, False)
+            except Forbidden:
+                mark_user_blocked(uidint, True)
             except Exception as e: logger.warning(f"Dir txt failed {uid_str}: {e}")
             if USE_STICKERS and sticker_id and "PASTE_" not in sticker_id:
                 try: await context.bot.send_sticker(chat_id=uidint, sticker=sticker_id, protect_content=True)
@@ -1887,7 +1916,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             try:
                 m = await context.bot.send_message(chat_id=vid, text=msg_preparing(pair, expiry),
                     parse_mode="Markdown", protect_content=True)
+                mark_user_blocked(vid, False)
                 return str(vid), m.message_id
+            except Forbidden:
+                mark_user_blocked(vid, True); return None, None
             except Exception as e:
                 logger.warning(f"Send failed {vid}: {e}"); return None, None
 
@@ -1902,7 +1934,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_signals(signals)
         SESSION_STATS["signal_count"] = SESSION_STATS.get("signal_count", 0) + 1
 
-        display = len(targets)
+        display = get_display_count()
         mode_note = " (VIP + Non-VIP)" if PUBLIC_SIGNAL_MODE else ""
         await context.bot.send_message(chat_id=uid,
             text=f"\u2705 Signal sent to *{display}* members{mode_note}!\n\n"
@@ -2869,6 +2901,7 @@ async def _send_help(chat_id, context):
         "`/vipusers` \u2014 View all VIP members + expiry dates\n"
         "`/trialusers` \u2014 View all users who used Free Trial (ID + name)\n"
         "`/allusers` \u2014 View all users (ID + name + VIP status)\n"
+        "`/blockedusers` \u2014 View users who blocked the bot\n"
         "`/revoke 123456789` \u2014 Remove VIP access from member\n\n"
         "--------------\n\U0001f4ca *STATS & FEEDBACK*\n--------------\n"
         "`/stats` \u2014 Full stats: wins, losses, members, weekly\n"
@@ -3105,6 +3138,41 @@ async def cmd_allusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"   \U0001f194 ID: `{uid_str}`\n"
             f"   {vip_tag}\n"
             f"   \U0001f4c5 {joined}\n"
+        )
+    text = "\n".join(lines)
+    if len(text) > 4000:
+        chunks = []
+        chunk = lines[0] + "\n"
+        for line in lines[1:]:
+            if len(chunk) + len(line) > 4000:
+                chunks.append(chunk)
+                chunk = line + "\n"
+            else:
+                chunk += line + "\n"
+        chunks.append(chunk)
+        for chunk in chunks:
+            await update.message.reply_text(chunk, parse_mode="Markdown")
+    else:
+        await update.message.reply_text(text, parse_mode="Markdown")
+
+async def cmd_blockedusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id): return
+    db = load_db()
+    users = db.get("users", {})
+    blocked = {k: v for k, v in users.items() if v.get("blocked")}
+    if not blocked:
+        await update.message.reply_text("\u2705 *No one has blocked the bot.*", parse_mode="Markdown")
+        return
+    lines = [f"\U0001f6ab *USERS WHO BLOCKED THE BOT \u2014 {len(blocked)} total*\n"]
+    for uid_str, info in blocked.items():
+        name = info.get("name", "?")
+        vip_tag = "\U0001f48e VIP" if info.get("vip") else "\U0001f194 Non-VIP"
+        bdate = info.get("blocked_date", "?")
+        lines.append(
+            f"\U0001f464 *{name}*\n"
+            f"   \U0001f194 ID: `{uid_str}`\n"
+            f"   {vip_tag}\n"
+            f"   \U0001f6ab Blocked: {bdate}\n"
         )
     text = "\n".join(lines)
     if len(text) > 4000:
@@ -3560,6 +3628,7 @@ def main():
     app.add_handler(CommandHandler("listcodes",    cmd_listcodes))
     app.add_handler(CommandHandler("vipusers",     cmd_vipusers))
     app.add_handler(CommandHandler("allusers",     cmd_allusers))
+    app.add_handler(CommandHandler("blockedusers", cmd_blockedusers))
     app.add_handler(CommandHandler("publicsignal", cmd_publicsignal))
     app.add_handler(CommandHandler("trialusers",   cmd_trialusers))
     app.add_handler(CommandHandler("revoke",       cmd_revoke))
