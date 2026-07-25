@@ -131,15 +131,16 @@ supabase = DATABASE_URL  # Truthy if set, used as flag below
 try:
     from PIL import Image, ImageDraw, ImageFont
     import io
-    WATERMARK_ENABLED = True
 except ImportError:
-    WATERMARK_ENABLED = False
+    pass
+PHOTO_WATERMARK_ENABLED = True    # Photos: watermark ON
+VIDEO_WATERMARK_ENABLED = False   # Videos: watermark OFF, per admin request
 
 WATERMARK_TEXT = "@EvalonwinnersBot"
 
 def add_watermark(image_bytes: bytes, user_id: int = None) -> bytes:
     """Add watermark to image. Larger text, cyan/green color for visibility."""
-    if not WATERMARK_ENABLED:
+    if not PHOTO_WATERMARK_ENABLED:
         return image_bytes
     try:
         if user_id:
@@ -203,6 +204,8 @@ def add_watermark(image_bytes: bytes, user_id: int = None) -> bytes:
 
 async def add_video_watermark(video_bytes: bytes, user_id=None) -> bytes:
     """Burn text watermark onto video using ffmpeg. Returns original bytes if ffmpeg fails."""
+    if not VIDEO_WATERMARK_ENABLED:
+        return video_bytes
     try:
         wm_line1 = "@EvalonwinnersBot"
         wm_line2 = f"ID:{user_id}" if user_id else ""
@@ -385,7 +388,7 @@ VIP_RULES = (
     "--------------"+"\n"
 )
 
-SESSION_STATS    = {"win_pct": 0, "loss_pct": 0, "start_time": None, "signal_count": 0, "locked": False}
+SESSION_STATS    = {"win_pct": 0, "loss_pct": 0, "win_count": 0, "loss_count": 0, "start_time": None, "signal_count": 0, "locked": False}
 SESSION_LOG      = []   # list of dicts: {pair, expiry, direction, result, count}
 FULL_SESSION_LOG = []   # full ordered log: every message/sticker sent during session
 PUBLIC_SIGNAL_MODE = False   # False = signals go to VIP only. True = VIP + Non-VIP.
@@ -520,10 +523,40 @@ def get_vip_count(): return sum(1 for v in load_db()["users"].values() if v.get(
 def get_display_count():
     return get_base_members() + get_vip_count()
 
+def get_referral_link(uid):
+    return f"https://t.me/Kentehsharevvipbot?start=ref{uid}"
+
+def get_referral_list(uid):
+    db = load_db()
+    return db.get("referrals", {}).get(str(uid), [])
+
+def get_referral_count(uid):
+    return len(get_referral_list(uid))
+
 def has_used_trial(uid):
     """Returns True if this user_id has ever used a 1w (Free Trial) code."""
     db = load_db()
     return str(uid) in db.get("trial_users", {})
+
+def grant_auto_trial(uid, name):
+    """Grants a brand-new user 1 free VIP session automatically, no code needed.
+    Unlike code-based trials, this expires after 1 completed session, not by date."""
+    db = load_db(); key = str(uid)
+    if key not in db["users"]: db["users"][key] = {}
+    db["users"][key].update({
+        "vip": True,
+        "vip_code": "AUTO_TRIAL",
+        "name": name,
+        "trial_sessions_left": 1,
+        "trial_welcomed": False,
+    })
+    db.setdefault("trial_users", {})
+    if key not in db["trial_users"]:
+        db["trial_users"][key] = {
+            "name": name, "code": "AUTO_TRIAL",
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        }
+    save_db(db)
 
 def activate_code(code, uid, name):
     db = load_db(); code = code.strip().upper()
@@ -607,7 +640,7 @@ def is_weekend():
 WEEKEND_DAY_NAME = lambda: datetime.now(timezone.utc).strftime("%A")  # "Saturday" or "Sunday"
 
 TUTORIAL_VIDEO = "BAACAgQAAxkBAAIFn2oRZ0HUGBuMA4GYy3E7cC4Bv32WAAKqHgACyDCJUL7jK5vNBqvvOwQ"
-INVITE_LINK    = "https://t.me/EvalonwinnersBot?start=ref8535925646"
+INVITE_LINK    = "https://t.me/Kentehsharevvipbot?start=ref8535925646"
 
 WEEKEND_VIP_MSGS = [
     "\U0001f389 Happy {day}, *{name}!*\n\nEnjoy your weekend \u2014 rest well and recharge!\nWe will be back with signals on *Monday*. \U0001f4aa\n\n\U0001f525 Stay focused \u2014 the market never sleeps forever!\n\n\U0001f451 ALWAYS EVALON TRADER IS THE KING OF BINARY \U0001f451",
@@ -627,15 +660,14 @@ WEEKEND_NOVIP_MSGS = [
 # ============================================================
 # MESSAGES
 # ============================================================
-def msg_preparing(pair, expiry, trades=1):
-    tline = f"\U0001f4a5 TRADES  : *{trades}*\n" if trades > 1 else ""
+def msg_preparing(pair, expiry, weight=5):
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
         "--------------"+"\n"
         f"\U0001f4ca PAIR    : *{pair}*\n"
         f"\u23f1 EXPIRY  : *{expiry} MIN*\n"
-        f"{tline}"
         f"\U0001f550 TIME    : *{current_time_utc()}*\n"
+        f"\U0001f4b0 INVEST  : *{weight}%* of your capital\n"
         "\U0001f4cd STATUS  : SIGNAL PREPARING...\n\n"
         "\u26a0\ufe0f WAIT FOR DIRECTION\n"
         "--------------"+"\n\n"
@@ -654,7 +686,7 @@ def msg_direction(pair, expiry, direction, trades=1):
         f"\U0001f550 ENTRY     : *{next_candle_time(expiry)}*\n"
         f"{arrow} DIRECTION : *{color} {direction}*\n"
         "--------------"+"\n\n"
-        "\u26a1 *OPEN YOUR TRADE NOW!*\n"
+        "\u26a1 *OPEN YOUR TRADE NEW CANDLE!*\n"
         "\U0001f48e VVIP MEMBERS ONLY"
     )
 
@@ -703,6 +735,19 @@ def msg_loss(pair, expiry, direction, pct=5):
         "\U0001f48e VVIP MEMBERS ONLY"
     )
 
+def msg_trial_welcome(name):
+    return (
+        "\U0001f389 *CONGRATULATIONS!* \U0001f389\n\n"
+        f"Welcome to *EVALON VVIP WINNERS*, {name}!\n\n"
+        "\U0001f381 As a new member, you've been given a *FREE VIP TRIAL SESSION* \u2014 "
+        "no code, no payment, just our gift to you.\n\n"
+        "\U0001f4ca You're about to receive the exact same signals our paying VIP "
+        "members get \u2014 live, in real time.\n\n"
+        "\U0001f440 Watch closely and see the value for yourself.\n"
+        "\U0001f48e Enjoyed it? Grab full VIP access anytime with `/start` \u2192 Get VIP Access.\n\n"
+        f"{KAULI_MBIU}"
+    )
+
 def msg_session_soon(minutes, is_vip=False):
     when = f"{minutes} minutes" if minutes < 60 else f"{minutes//60} hour"
     rules = f"\n{VIP_RULES}" if is_vip else "\n"
@@ -726,23 +771,28 @@ def msg_money_management():
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
         "--------------\n"
-        "\U0001f4b0 *MONEY MANAGEMENT REMINDER*\n"
+        "\U0001f4b0 *HOW WE PROTECT & GROW YOUR CAPITAL*\n"
         "--------------\n\n"
+        "This group is built for *profit*, not loss \u2014 our rules exist so your "
+        "account grows steadily, session after session.\n\n"
         "\U0001f4cc Signal 1 \u2014 invest only *5%* of your capital\n"
-        "\U0001f4cc If Signal 1 wins, we STOP for the session \u2014 protect the profit\n"
-        "\U0001f4cc If Signal 1 loses, Signal 2 (recovery) is *15%* \u2014 then we STOP either way\n"
-        "\U0001f4cc Maximum *2 signals per session* \u2014 no exceptions\n"
-        "\U0001f4cc Every trade is a *NEW CANDLE* entry\n"
-        "\U0001f4cc Direction is sent *before* the candle closes \u2014 be ready\n\n"
-        "\u26a0\ufe0f Binary trading carries real risk. We won't hit 100% every single day \u2014 our job is to protect your capital and keep your account alive for the long run.\n\n"
-        "\U0001f6ab Never trade beyond what your account can handle\n"
-        "\U0001f6ab No Martingale \u2014 no chasing losses\n\n"
-        "\U0001f48e Discipline today = Profit tomorrow.\n"
-        "\U0001f512 We protect your capital like it's ours.\n\n"
+        "\U0001f4cc Every trade is a *NEW CANDLE* entry, direction sent before it closes\n\n"
+        "\u26a0\ufe0f *A word of caution:* many traders online promise 100% win rates every "
+        "day \u2014 that's exactly how people get deceived and end up losing everything. "
+        "No one on earth can guarantee 100% in forex/binary, every single day. "
+        "This group has never claimed that and never will.\n\n"
+        "If any group promises you 100% daily, that's your sign to walk away \u2014 "
+        "staying there only leads to bigger losses. Here, we aim for small, honest "
+        "profit each day while your capital keeps growing. Just follow the group rules.\n\n"
+        "\U0001f4c8 *About the Compounding Group:* it also does NOT promise 100% daily. "
+        "We trade carefully, at a calm pace, with well-analyzed signals \u2014 "
+        "quality over rushing. Recommended investment there is *25%* per signal. Our goal is "
+        "always the same: protect your capital first, grow it steadily second.\n\n"
+        "\U0001f512 Your capital is what matters most \u2014 we treat it like our own.\n\n"
         f"{KAULI_MBIU}"
     )
 
-def msg_session_end(win_pct=0, loss_pct=0):
+def msg_session_end(win_pct=0, loss_pct=0, win_count=0, loss_count=0):
     # Calculate real session duration
     dur_line = ""
     if SESSION_STATS.get("start_time"):
@@ -753,6 +803,10 @@ def msg_session_end(win_pct=0, loss_pct=0):
         else:
             h = mins // 60; m = mins % 60
             dur_line = f"\u23f1 DURATION : *{h}h {m}min*\n"
+    total_trades = win_count + loss_count
+    net_pct  = win_pct - loss_pct
+    total_pct = win_pct + loss_pct
+    accuracy = f"{(win_pct/total_pct*100):.0f}%" if total_pct > 0 else "N/A"
     return (
         "\U0001f3c6 *EVALON VVIP WINNERS* \U0001f3c6\n\n"
         "--------------\n"
@@ -763,6 +817,8 @@ def msg_session_end(win_pct=0, loss_pct=0):
         "--------------\n"
         f"\u2705 WIN      : *{win_pct}%*\n"
         f"\u274c LOSS     : *{loss_pct}%*\n"
+        f"\U0001f4b0 TOTAL     : *{'+' if net_pct >= 0 else ''}{net_pct}%*\n"
+        f"\U0001f3af ACCURACY  : *{accuracy}*\n"
         f"{dur_line}"
         "--------------\n\n"
         "\U0001f4aa Great discipline leads to consistent profits!\n"
@@ -874,6 +930,7 @@ def kb_feedback(session_id):
             InlineKeyboardButton("\u2b50\u2b50\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id}_5"),
         ],
         [InlineKeyboardButton("\U0001f7e2 SESSION", callback_data="trigger_start")],
+        [InlineKeyboardButton("\U0001f4ac Contact Admin", url=SUPPORT_URL)],
     ])
 
 # FIX 1: admin /start \u2014 short panel + buttons
@@ -901,8 +958,36 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     import random as _random
     uid  = update.effective_user.id
     name = update.effective_user.first_name or "Trader"
+
+    db_before = load_db()
+    is_brand_new = str(uid) not in db_before.get("users", {})
+
     get_user(uid)
     update_user(uid, {"name": name})
+
+    # Referral capture: link is https://t.me/Kentehsharevvipbot?start=ref<inviter_id>
+    if is_brand_new:
+        args = context.args or []
+        if args and args[0].startswith("ref"):
+            ref_part = args[0][3:]
+            if ref_part.isdigit() and int(ref_part) != uid:
+                inviter_id = int(ref_part)
+                db = load_db()
+                if str(inviter_id) in db.get("users", {}):
+                    db.setdefault("referrals", {})
+                    db["referrals"].setdefault(str(inviter_id), [])
+                    already = any(r.get("uid") == uid for r in db["referrals"][str(inviter_id)])
+                    if not already:
+                        db["referrals"][str(inviter_id)].append({
+                            "uid": uid, "name": name,
+                            "date": datetime.now().strftime("%Y-%m-%d %H:%M")
+                        })
+                        db["users"][str(uid)]["referred_by"] = inviter_id
+                        save_db(db)
+
+    # Automatic free trial: every brand-new user gets 1 free VIP session, no code needed.
+    if is_brand_new and not is_admin(uid):
+        grant_auto_trial(uid, name)
 
     if is_admin(uid):
         db_type = "\u2705 PostgreSQL" if DATABASE_URL else "\u26a0\ufe0f Local JSON"
@@ -1038,10 +1123,12 @@ async def _process_result(update, context, result, sig_id, count, query=None):
 
     if result == "WIN":
         SESSION_STATS["win_pct"] += weight
+        SESSION_STATS["win_count"] += 1
         if weight == 5:
             SESSION_STATS["locked"] = True   # won signal 1 -> stop for this session
     else:
         SESSION_STATS["loss_pct"] += weight
+        SESSION_STATS["loss_count"] += 1
     if weight == 15:
         SESSION_STATS["locked"] = True   # signal 2 always ends the session, win or lose
 
@@ -1080,6 +1167,9 @@ async def _process_result(update, context, result, sig_id, count, query=None):
     # Build full session-style summary for admin (same look as user message)
     win_pct_sofar   = SESSION_STATS["win_pct"]
     loss_pct_sofar  = SESSION_STATS["loss_pct"]
+    net_sofar       = win_pct_sofar - loss_pct_sofar
+    tot_pct_sofar   = win_pct_sofar + loss_pct_sofar
+    acc_sofar       = f"{(win_pct_sofar/tot_pct_sofar*100):.0f}%" if tot_pct_sofar > 0 else "N/A"
     dur_line = ""
     if SESSION_STATS.get("start_time"):
         elapsed = int(time.time() - SESSION_STATS["start_time"])
@@ -1102,6 +1192,8 @@ async def _process_result(update, context, result, sig_id, count, query=None):
         "--------------\n"
         f"\u2705 WIN      : *{win_pct_sofar}%*\n"
         f"\u274c LOSS     : *{loss_pct_sofar}%*\n"
+        f"\U0001f4b0 TOTAL     : *{'+' if net_sofar >= 0 else ''}{net_sofar}%*\n"
+        f"\U0001f3af ACCURACY  : *{acc_sofar}*\n"
         f"{dur_line}"
         "--------------\n\n"
         "\U0001f48e VVIP MEMBERS ONLY"
@@ -1135,6 +1227,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data in ("sess_30", "sess_60"):
         if not is_admin(uid): return
         SESSION_STATS["win_pct"] = SESSION_STATS["loss_pct"] = 0
+        SESSION_STATS["win_count"] = SESSION_STATS["loss_count"] = 0
         SESSION_STATS["signal_count"] = 0
         SESSION_STATS["locked"] = False
         SESSION_LOG.clear()
@@ -1144,6 +1237,21 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         vip_ids  = get_vip_ids()
         novip_ids= get_novip_ids()
         await send_to_list(context, vip_ids, text=msg_session_soon(mins, is_vip=True))
+
+        # Welcome new free-trial members on their very first session
+        db_trial = load_db()
+        for vid in vip_ids:
+            udata = db_trial["users"].get(str(vid), {})
+            if udata.get("trial_sessions_left", 0) > 0 and not udata.get("trial_welcomed"):
+                try:
+                    await context.bot.send_message(chat_id=vid,
+                        text=msg_trial_welcome(udata.get("name", "Trader")),
+                        parse_mode="Markdown", protect_content=True)
+                    db_trial["users"][str(vid)]["trial_welcomed"] = True
+                except Exception as e:
+                    logger.warning(f"Trial welcome failed {vid}: {e}")
+        save_db(db_trial)
+
         for nuid in novip_ids:
             try:
                 await context.bot.send_message(chat_id=nuid,
@@ -1205,13 +1313,13 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "end_session":
         if not is_admin(uid): return
         vip_ids    = get_vip_ids()
-        text       = msg_session_end(SESSION_STATS["win_pct"], SESSION_STATS["loss_pct"])
+        text       = msg_session_end(SESSION_STATS["win_pct"], SESSION_STATS["loss_pct"], SESSION_STATS["win_count"], SESSION_STATS["loss_count"])
         session_id = str(int(time.time()))
         record_session_weekly()
         # Record session end in full log
         FULL_SESSION_LOG.append({"type": "sticker", "content": SESSION_CLOSE_STICKER})
         FULL_SESSION_LOG.append({"type": "text",    "content": text})
-        fb_text    = ("\n\n------------------\n\U0001f4dd *Rate today's session:*\n""Tap a number (1 = poor, 5 = excellent)\n\n""------------------\n""\U0001f916 *Auto-Copy Trades on Pocket Option?*\n""Want your trades copied automatically?\n""Contact admin to get set up: @EvalonwinnersBot")
+        fb_text    = ("\n\n------------------\n\U0001f4dd *Rate today's session:*\n""Tap a number (1 = poor, 5 = excellent)\n\n""------------------\n""\U0001f916 *Auto-Copy Trades on Pocket Option?*\n""Want your trades copied automatically?\n""Tap Contact Admin below to get set up \U0001f447")
         fb_kb      = kb_feedback(session_id)
         async def _send_session_end(vid):
             try: await context.bot.send_sticker(chat_id=vid, sticker=SESSION_CLOSE_STICKER, protect_content=True)
@@ -1220,6 +1328,17 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown", reply_markup=fb_kb, protect_content=True)
             except: pass
         await asyncio.gather(*[_send_session_end(vid) for vid in vip_ids])
+
+        # Expire free-trial VIP access: their session is now complete
+        db_trial_end = load_db()
+        for vid in vip_ids:
+            udata = db_trial_end["users"].get(str(vid), {})
+            if udata.get("trial_sessions_left", 0) > 0:
+                udata["trial_sessions_left"] = 0
+                udata["vip"] = False
+                udata["trial_completed"] = True
+        save_db(db_trial_end)
+
         # Auto-send account management offer 5 minutes after session ends
         try:
             if context.job_queue:
@@ -1334,7 +1453,7 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.answer(f"Sending replay to {len(novip_ids)} non-VIP members...", show_alert=False)
         for entry in SESSION_LOG:
             pair_r = entry["pair"]; exp_r = entry["expiry"]
-            dir_r  = entry["direction"]; res_r = entry["result"]; cnt_r = entry["count"]
+            dir_r  = entry["direction"]; res_r = entry["result"]; cnt_r = entry.get("weight", 5)
             icon_r = "\u2705" if res_r == "WIN" else "\u274c"
             stk_dir = BUY_STICKER if dir_r == "BUY" else SELL_STICKER
             stk_res = WIN_STICKER if res_r == "WIN" else LOSS_STICKER
@@ -1369,17 +1488,25 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "--------------\n\n"
             "\U0001f48e Want to receive these signals LIVE?\n"
             "Get your VIP access today and never miss a trade!\n\n"
+            "\U0001f4dd *Rate today's session:* (1 = poor, 5 = excellent)\n\n"
             f"{KAULI_MBIU}"
         )
+        session_id_nv = str(int(time.time()))
         for nuid in novip_ids:
             try:
                 await context.bot.send_message(
                     chat_id=nuid, text=promo,
                     parse_mode="Markdown", protect_content=True,
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("\U0001f511 Get VIP Access", callback_data="enter_code"),
-                        InlineKeyboardButton("\U0001f4ac Contact Admin",  url=SUPPORT_URL),
-                    ]])
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("\u2b50", callback_data=f"fb_{session_id_nv}_1"),
+                         InlineKeyboardButton("\u2b50\u2b50", callback_data=f"fb_{session_id_nv}_2"),
+                         InlineKeyboardButton("\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id_nv}_3"),
+                         InlineKeyboardButton("\u2b50\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id_nv}_4"),
+                         InlineKeyboardButton("\u2b50\u2b50\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id_nv}_5")],
+                        [InlineKeyboardButton("\U0001f511 Get VIP Access", callback_data="enter_code"),
+                         InlineKeyboardButton("\U0001f4ac Contact Admin",  url=SUPPORT_URL)],
+                        [InlineKeyboardButton("\U0001f4e2 Invite & Get VIP", url=get_referral_link(nuid))],
+                    ])
                 )
             except: pass
         await context.bot.send_message(
@@ -1408,8 +1535,10 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "--------------\n\n"
             "\U0001f48e These are the results our VIP members received today!\n"
             "Join VIP and start profiting with us!\n\n"
+            "\U0001f4dd *Rate today's session:* (1 = poor, 5 = excellent)\n\n"
             f"{KAULI_MBIU}"
         )
+        session_id_nv = str(int(time.time()))
 
         sent = 0
         for nuid in novip_ids:
@@ -1417,10 +1546,16 @@ async def buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await context.bot.send_message(
                     chat_id=nuid, text=results_msg,
                     parse_mode="Markdown", protect_content=True,
-                    reply_markup=InlineKeyboardMarkup([[
-                        InlineKeyboardButton("\U0001f511 Get VIP Access", callback_data="enter_code"),
-                        InlineKeyboardButton("\U0001f4ac Contact Admin",  url=SUPPORT_URL),
-                    ]])
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("\u2b50", callback_data=f"fb_{session_id_nv}_1"),
+                         InlineKeyboardButton("\u2b50\u2b50", callback_data=f"fb_{session_id_nv}_2"),
+                         InlineKeyboardButton("\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id_nv}_3"),
+                         InlineKeyboardButton("\u2b50\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id_nv}_4"),
+                         InlineKeyboardButton("\u2b50\u2b50\u2b50\u2b50\u2b50", callback_data=f"fb_{session_id_nv}_5")],
+                        [InlineKeyboardButton("\U0001f511 Get VIP Access", callback_data="enter_code"),
+                         InlineKeyboardButton("\U0001f4ac Contact Admin",  url=SUPPORT_URL)],
+                        [InlineKeyboardButton("\U0001f4e2 Invite & Get VIP", url=get_referral_link(nuid))],
+                    ])
                 )
                 sent += 1
             except: pass
@@ -1914,7 +2049,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sent_msgs = {}
         async def _send_preparing(vid):
             try:
-                m = await context.bot.send_message(chat_id=vid, text=msg_preparing(pair, expiry),
+                m = await context.bot.send_message(chat_id=vid, text=msg_preparing(pair, expiry, weight),
                     parse_mode="Markdown", protect_content=True)
                 mark_user_blocked(vid, False)
                 return str(vid), m.message_id
@@ -2248,8 +2383,8 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except Exception as e:
                     logger.warning(f"Broadcast photo failed {tid}: {e}")
         elif replied.video:
-            wm_caption = f"{replied.caption or caption or ''}\n\n\U0001f4f9 @EvalonwinnersBot".strip()
-            sent, _ = await send_to_list(context, targets, video=replied.video.file_id, caption=wm_caption)
+            vid_caption = (replied.caption or caption or "").strip()
+            sent, _ = await send_to_list(context, targets, video=replied.video.file_id, caption=vid_caption)
         elif replied.sticker: sent, _ = await send_to_list(context, targets, sticker=replied.sticker.file_id)
         elif replied.animation: sent, _ = await send_to_list(context, targets, animation=replied.animation.file_id, caption=replied.caption or caption or None)
         else: sent, _ = await send_to_list(context, targets, text=replied.text or caption)
@@ -2275,7 +2410,7 @@ async def session_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def end_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     vip_ids    = get_vip_ids()
-    text       = msg_session_end(SESSION_STATS["win_pct"], SESSION_STATS["loss_pct"])
+    text       = msg_session_end(SESSION_STATS["win_pct"], SESSION_STATS["loss_pct"], SESSION_STATS["win_count"], SESSION_STATS["loss_count"])
     session_id = str(int(time.time()))
     fb_text    = (
         "\n\n------------------\n\U0001f4dd *Rate today's session:*\n"
@@ -2283,13 +2418,24 @@ async def end_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "------------------\n"
         "\U0001f916 *Auto-Copy Trades on Pocket Option?*\n"
         "Want your trades copied automatically?\n"
-        "Contact admin to get set up."
+        "Tap Contact Admin below to get set up \U0001f447"
     )
     # FIX 4: VIP only
     for vid in vip_ids:
         try: await context.bot.send_message(chat_id=vid, text=text+fb_text,
                 parse_mode="Markdown", reply_markup=kb_feedback(session_id))
         except: pass
+
+    # Expire free-trial VIP access: their session is now complete
+    db_trial_end = load_db()
+    for vid in vip_ids:
+        udata = db_trial_end["users"].get(str(vid), {})
+        if udata.get("trial_sessions_left", 0) > 0:
+            udata["trial_sessions_left"] = 0
+            udata["vip"] = False
+            udata["trial_completed"] = True
+    save_db(db_trial_end)
+
     sigs = load_signals(); sigs[f"session_{session_id}"] = {"session_id": session_id}; save_signals(sigs)
     # Auto-send account management offer 5 minutes after session ends
     try:
@@ -2372,6 +2518,32 @@ def _make_global_name(used):
 # ============================================================
 # /feedback - real + fake mixed, no approval needed
 # ============================================================
+async def cmd_myinvites(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid   = update.effective_user.id
+    link  = get_referral_link(uid)
+    refs  = get_referral_list(uid)
+    count = len(refs)
+    lines = [
+        "\U0001f465 *YOUR INVITE DASHBOARD*\n",
+        f"\n\U0001f517 Your link:\n`{link}`\n",
+        f"\n\U0001f4ca People invited: *{count}*\n",
+    ]
+    if refs:
+        lines.append("\n--------------\n")
+        for r in refs[-20:]:
+            lines.append(f"\U0001f464 {r.get('name','?')}  |  \U0001f4c5 {r.get('date','?')}\n")
+        if count > 20:
+            lines.append(f"\n_...and {count - 20} more_\n")
+    else:
+        lines.append("\nShare your link above \u2014 once someone joins through it, they'll show up here!\n")
+    lines.append(f"\n\U0001f525 The more you invite, the more free VIP access you can earn.\n")
+    await update.message.reply_text(
+        "".join(lines), parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("\U0001f4e2 Share Invite Link", url=f"https://t.me/share/url?url={link}"),
+        ]])
+    )
+
 async def feedback_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     import random
@@ -2880,8 +3052,8 @@ async def _send_help(chat_id, context):
         "\U0001f4e2 *Send Results to Non-VIP* \u2014 Results summary only\n"
         "\U0001f4e2 *Forward Stats to Channel* \u2014 Post to channel\n\n"
         "--------------\n\U0001f4e2 *BROADCAST*\n--------------\n"
-        "Send photo \u2192 VIP only (watermark @EVALONWINNERSBOT)\n"
-        "Send video \u2192 VIP + Non-VIP + Channel (with watermark)\n"
+        "Send photo \u2192 VIP only (watermarked)\n"
+        "Send video \u2192 VIP + Non-VIP + Channel (no watermark)\n"
         "Send sticker \u2192 VIP only\n"
         "`/broadcast [text]` \u2192 Text to VIP\n"
         "`/broadcast all [text]` \u2192 Text to everyone\n"
@@ -2902,6 +3074,8 @@ async def _send_help(chat_id, context):
         "`/trialusers` \u2014 View all users who used Free Trial (ID + name)\n"
         "`/allusers` \u2014 View all users (ID + name + VIP status)\n"
         "`/blockedusers` \u2014 View users who blocked the bot\n"
+        "`/referrals` \u2014 Top inviters leaderboard\n"
+        "`/referrals <user_id>` \u2014 See who a specific user invited\n"
         "`/revoke 123456789` \u2014 Remove VIP access from member\n\n"
         "--------------\n\U0001f4ca *STATS & FEEDBACK*\n--------------\n"
         "`/stats` \u2014 Full stats: wins, losses, members, weekly\n"
@@ -3129,15 +3303,18 @@ async def cmd_allusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("\U0001f465 *No users yet.*", parse_mode="Markdown")
         return
     lines = [f"\U0001f465 *ALL USERS \u2014 {len(users)} total*\n"]
+    referrals = db.get("referrals", {})
     for uid_str, info in users.items():
         name = info.get("name", "?")
         vip_tag = "\U0001f48e VIP" if info.get("vip") else "\U0001f194 Non-VIP"
         joined = info.get("joined_date", info.get("date", "?"))
+        invited_n = len(referrals.get(uid_str, []))
         lines.append(
             f"\U0001f464 *{name}*\n"
             f"   \U0001f194 ID: `{uid_str}`\n"
             f"   {vip_tag}\n"
             f"   \U0001f4c5 {joined}\n"
+            f"   \U0001f465 Invited: *{invited_n}*\n"
         )
     text = "\n".join(lines)
     if len(text) > 4000:
@@ -3154,6 +3331,39 @@ async def cmd_allusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(chunk, parse_mode="Markdown")
     else:
         await update.message.reply_text(text, parse_mode="Markdown")
+
+async def cmd_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id): return
+    db = load_db()
+    referrals = db.get("referrals", {})
+    users = db.get("users", {})
+    args = context.args or []
+
+    if args:
+        # /referrals <user_id> -> full list of who that user invited
+        target = args[0]
+        info = users.get(target, {})
+        refs = referrals.get(target, [])
+        name = info.get("name", "?")
+        lines = [f"\U0001f465 *{name}* (`{target}`) invited *{len(refs)}* people:\n"]
+        for r in refs:
+            lines.append(f"\U0001f464 {r.get('name','?')}  |  ID `{r.get('uid','?')}`  |  \U0001f4c5 {r.get('date','?')}\n")
+        if not refs:
+            lines.append("\n_No invites yet._")
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+        return
+
+    # No args -> leaderboard of top inviters
+    if not referrals:
+        await update.message.reply_text("\U0001f465 *No referrals recorded yet.*", parse_mode="Markdown")
+        return
+    ranked = sorted(referrals.items(), key=lambda kv: len(kv[1]), reverse=True)
+    lines = ["\U0001f3c6 *TOP INVITERS*\n"]
+    for uid_str, refs in ranked[:20]:
+        name = users.get(uid_str, {}).get("name", "?")
+        lines.append(f"\U0001f464 *{name}* (`{uid_str}`) \u2014 *{len(refs)}* invited\n")
+    lines.append("\n_Use `/referrals <user_id>` to see who a specific user invited._")
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
 async def cmd_blockedusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
@@ -3474,11 +3684,11 @@ async def send_account_management_msg(context):
         "\U0001f525 The more you invite, the more you earn.\n\n"
         f"{KAULI_MBIU}"
     )
-    kb = InlineKeyboardMarkup([[
-        InlineKeyboardButton("\U0001f91d Invite Friends", url="https://t.me/EvalonwinnersBot")
-    ]])
     for uid in vip_ids:
         try:
+            kb = InlineKeyboardMarkup([[
+                InlineKeyboardButton("\U0001f91d Invite Friends", url=get_referral_link(uid))
+            ]])
             await context.bot.send_message(
                 chat_id=uid, text=msg,
                 parse_mode="Markdown", reply_markup=kb,
@@ -3618,6 +3828,7 @@ def main():
     app.add_handler(CommandHandler("session",      session_cmd))
     app.add_handler(CommandHandler("end",          end_cmd))
     app.add_handler(CommandHandler("feedback",        feedback_cmd))
+    app.add_handler(CommandHandler("myinvites",       cmd_myinvites))
     app.add_handler(CommandHandler("channelfeedback", cmd_channelfeedback))
     app.add_handler(CommandHandler("realfeedback",    cmd_realfeedback))
     app.add_handler(CommandHandler("realfeedbacks",   cmd_realfeedbacks))
@@ -3629,6 +3840,7 @@ def main():
     app.add_handler(CommandHandler("vipusers",     cmd_vipusers))
     app.add_handler(CommandHandler("allusers",     cmd_allusers))
     app.add_handler(CommandHandler("blockedusers", cmd_blockedusers))
+    app.add_handler(CommandHandler("referrals",    cmd_referrals))
     app.add_handler(CommandHandler("publicsignal", cmd_publicsignal))
     app.add_handler(CommandHandler("trialusers",   cmd_trialusers))
     app.add_handler(CommandHandler("revoke",       cmd_revoke))
